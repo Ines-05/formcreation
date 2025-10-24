@@ -1,0 +1,817 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Send } from 'lucide-react';
+import { FormDefinition, FormSubmission } from '@/lib/types';
+import { TallyPreview } from '@/components/TallyPreview';
+import { TallyConnectionCard } from '@/components/ConnectTally';
+import { ToolSelector, FormTool } from '@/components/ToolSelector';
+import { GoogleFormsConnectionCard } from '@/components/GoogleFormsConnect';
+import { TypeformConnectionCard } from '@/components/TypeformConnect';
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  formDefinition?: FormDefinition;
+  shareableLink?: string;
+  shortLink?: string;
+  formId?: string; // ID du formulaire dans la DB
+  tallyFormId?: string; // ID du formulaire Tally
+  tallyEmbedUrl?: string; // URL d'intégration Tally
+  needsValidation?: boolean; // Indique si le formulaire attend validation
+  requiresToolSelection?: boolean; // Afficher le sélecteur d'outil
+  requiresToolConnection?: FormTool; // Quel outil doit être connecté
+}
+
+export default function Home() {
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+  const [isValidatingForm, setIsValidatingForm] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isTallyConnected, setIsTallyConnected] = useState(false);
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<FormTool | null>(null);
+  const [userId] = useState('user-demo-123'); // Pour l'instant un userId fixe, à remplacer par l'auth
+  const [currentFormDefinition, setCurrentFormDefinition] = useState<FormDefinition | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewLink, setPreviewLink] = useState<string | null>(null);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    setIsMounted(true);
+    // Vérifier si l'utilisateur a déjà connecté Tally et Google
+    checkTallyConnection();
+    checkGoogleConnection();
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const checkTallyConnection = async () => {
+    try {
+      const response = await fetch(`/api/user/tally/status?userId=${userId}`);
+      const data = await response.json();
+      setIsTallyConnected(data.isConnected);
+    } catch (error) {
+      console.error('Error checking Tally connection:', error);
+    }
+  };
+
+  const checkGoogleConnection = async () => {
+    try {
+      const response = await fetch(`/api/auth/google/status?userId=${userId}`);
+      const data = await response.json();
+      setIsGoogleConnected(data.isConnected);
+    } catch (error) {
+      console.error('Error checking Google connection:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(),
+      timestamp: new Date(),
+    };
+
+    // Ajouter le message utilisateur et vider l'input
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+    
+    console.log('📝 Message utilisateur:', userMessage.content);
+    console.log('🔧 Outil sélectionné:', selectedTool);
+    console.log('🔌 Tally connecté:', isTallyConnected);
+    console.log('🔌 Google connecté:', isGoogleConnected);
+    
+    try {
+      // Vérifier si l'utilisateur demande de créer un formulaire
+      const lowerContent = userMessage.content.toLowerCase();
+      const wantsToCreateForm = 
+        lowerContent.includes('formulaire') ||
+        lowerContent.includes('form') ||
+        lowerContent.includes('créer') ||
+        lowerContent.includes('créer un') ||
+        lowerContent.includes('j\'ai besoin') ||
+        lowerContent.includes('je veux');
+
+      if (wantsToCreateForm && !selectedTool) {
+        // L'utilisateur veut créer un formulaire mais n'a pas encore choisi d'outil
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: '🎯 Super ! Avant de créer ton formulaire, choisis l\'outil que tu veux utiliser :',
+          timestamp: new Date(),
+          requiresToolSelection: true,
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Si un outil est sélectionné mais pas connecté
+      if (selectedTool && !isToolConnected(selectedTool)) {
+        const toolName = selectedTool === 'tally' ? 'Tally' : 'Google Forms';
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `🔐 Parfait ! Pour créer des formulaires avec ${toolName}, tu dois d'abord connecter ton compte. Clique sur le bouton ci-dessous pour commencer :`,
+          timestamp: new Date(),
+          requiresToolConnection: selectedTool,
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Construire l'historique pour l'API
+      const conversationHistory = [...messages, userMessage].map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      console.log('📡 Envoi à /api/conversation...');
+      const response = await fetch('/api/conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage.content,
+          conversationHistory
+        }),
+      });
+
+      console.log('📡 Réponse conversation:', response.status);
+      const data = await response.json();
+      console.log('📦 Données reçues:', data);
+
+      if (data.assistantMessage) {
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.assistantMessage,
+          timestamp: new Date(),
+          formDefinition: data.formDefinition || undefined,
+          needsValidation: data.formDefinition ? true : false,
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+
+        // Si un formulaire a été généré et que Tally est connecté, créer le formulaire
+        if (data.formDefinition && selectedTool === 'tally' && isTallyConnected) {
+          console.log('🎨 Création du formulaire Tally...', data.formDefinition);
+          try {
+            const tallyResponse = await fetch('/api/tally/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                formDefinition: data.formDefinition,
+                userId: userId,
+              }),
+            });
+
+            console.log('📡 Réponse Tally reçue:', tallyResponse.status);
+            const tallyData = await tallyResponse.json();
+            console.log('📦 Données Tally:', tallyData);
+
+            if (tallyData.success) {
+              // Mettre à jour le message avec l'ID Tally pour le preview
+              setMessages(prev => prev.map(msg => 
+                msg.id === assistantMessage.id
+                  ? { 
+                      ...msg, 
+                      tallyFormId: tallyData.formId,
+                      tallyEmbedUrl: tallyData.embedUrl,
+                      shareableLink: tallyData.shareableLink,
+                      shortLink: tallyData.shortLink,
+                    }
+                  : msg
+              ));
+            }
+          } catch (tallyError) {
+            console.error('Erreur lors de la création Tally:', tallyError);
+          }
+        }
+
+        // TODO: Gérer la création avec Google Forms
+        if (data.formDefinition && selectedTool === 'google-forms' && isGoogleConnected) {
+          console.log('🎨 Création du formulaire Google Forms...', data.formDefinition);
+          try {
+            const googleResponse = await fetch('/api/google-forms/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                formDefinition: data.formDefinition,
+                userId: userId,
+              }),
+            });
+
+            console.log('📡 Réponse Google Forms reçue:', googleResponse.status);
+            const googleData = await googleResponse.json();
+            console.log('📦 Données Google Forms:', googleData);
+
+            if (googleData.success) {
+              // Mettre à jour le message avec le lien Google Forms
+              setMessages(prev => prev.map(msg => 
+                msg.id === assistantMessage.id
+                  ? { 
+                      ...msg, 
+                      formId: googleData.formId,
+                      shareableLink: googleData.responderUri,
+                    }
+                  : msg
+              ));
+              
+              // Activer la prévisualisation
+              setShowPreview(true);
+              setPreviewLink(googleData.responderUri);
+              setCurrentFormDefinition(data.formDefinition);
+              
+              // Message invitant à prévisualiser
+              const previewMsg: ChatMessage = {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `✨ Super ! Ton formulaire est créé. Tu peux le voir à gauche.\n\nSi tu veux modifier quelque chose, dis-le moi ! Sinon, clique sur "Finaliser" pour obtenir le lien de partage.`,
+                timestamp: new Date(),
+              };
+              setMessages(prev => [...prev, previewMsg]);
+            } else {
+              console.error('❌ Erreur Google Forms:', googleData);
+              const errorMsg: ChatMessage = {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `❌ Désolé, il y a eu un problème lors de la création du formulaire Google : ${googleData.error || 'Erreur inconnue'}`,
+                timestamp: new Date(),
+              };
+              setMessages(prev => [...prev, errorMsg]);
+            }
+          } catch (googleError) {
+            console.error('❌ Erreur lors de la création Google Forms:', googleError);
+            const errorMsg: ChatMessage = {
+              id: Date.now().toString(),
+              role: 'assistant',
+              content: '❌ Erreur lors de la création du formulaire Google. Vérifie la console pour plus de détails.',
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, errorMsg]);
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('Erreur lors de la conversation:', error);
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Désolé, j\'ai eu un problème technique. Peux-tu répéter ta demande ?',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isToolConnected = (tool: FormTool): boolean => {
+    if (tool === 'tally') return isTallyConnected;
+    if (tool === 'google-forms') return isGoogleConnected;
+    if (tool === 'typeform') return false; // TODO: Implémenter Typeform
+    if (tool === 'internal') return true; // Toujours connecté (hébergé ici)
+    return false;
+  };
+
+  const handleToolSelection = (tool: FormTool) => {
+    setSelectedTool(tool);
+    
+    const toolNames: Record<NonNullable<FormTool>, string> = {
+      'tally': 'Tally',
+      'google-forms': 'Google Forms',
+      'typeform': 'Typeform',
+      'internal': 'le formulaire hébergé sur cette app',
+    };
+    
+    const toolName = toolNames[tool];
+    
+    // Retirer le message avec requiresToolSelection
+    setMessages(prev => prev.filter(m => !m.requiresToolSelection));
+    
+    // Ajouter un message simple confirmant le choix
+    const confirmationMsg: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: `✅ Parfait ! Tu as choisi **${toolName}**.`,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, confirmationMsg]);
+    
+    // Si l'outil est déjà connecté ou n'a pas besoin de connexion
+    if (isToolConnected(tool)) {
+      const confirmMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `✅ Parfait ! Tu as choisi ${toolName}. ${
+          tool === 'internal' 
+            ? 'Le formulaire sera hébergé directement ici. Décris-moi maintenant ce que tu veux créer !'
+            : 'Ton compte est déjà connecté. Décris-moi maintenant le formulaire que tu veux créer !'
+        }`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, confirmMessage]);
+    } else {
+      // L'outil nécessite une connexion
+      const confirmMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `✅ Parfait ! Tu as choisi ${toolName}. Maintenant, connecte ton compte ${toolName} pour continuer.`,
+        timestamp: new Date(),
+        requiresToolConnection: tool,
+      };
+      setMessages(prev => [...prev, confirmMessage]);
+    }
+  };
+
+  const handleValidateForm = async (messageId: string) => {
+    setIsValidatingForm(true);
+    try {
+      // Le formulaire Tally est déjà créé, on marque juste comme validé
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, needsValidation: false }
+          : msg
+      ));
+
+      // Ajouter un message de confirmation
+      const confirmMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `🎉 Parfait ! Ton formulaire est maintenant validé et prêt à être partagé !\n\nTu peux utiliser le lien ci-dessus pour le partager avec d'autres personnes. Ils pourront le remplir et tu pourras voir toutes les réponses en me demandant les statistiques. 📊`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, confirmMessage]);
+
+    } catch (error) {
+      console.error('Erreur lors de la validation:', error);
+    } finally {
+      setIsValidatingForm(false);
+    }
+  };
+
+  const handleFormSubmit = async (formData: FormSubmission) => {
+    setIsSubmittingForm(true);
+    try {
+      const response = await fetch('/api/submit-form', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formData,
+          formId: 'conversation-form',
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        const successMessage: ChatMessage = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: '✅ Parfait ! Ton formulaire a été soumis avec succès. Merci pour les informations ! 🎉\n\nVeux-tu créer un autre formulaire ?',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, successMessage]);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error);
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: '❌ Il y a eu un problème lors de la soumission. Peux-tu réessayer ?',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsSubmittingForm(false);
+    }
+  };
+
+  const handleFinalizeForm = () => {
+    // Masquer la preview et afficher le lien final
+    setShowPreview(false);
+    
+    const finalMsg: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: `🎉 Parfait ! Ton formulaire est finalisé.\n\n🔗 **Lien de partage** :\n${previewLink}\n\nPartage ce lien pour commencer à collecter des réponses ! 📊`,
+      timestamp: new Date(),
+      shareableLink: previewLink || undefined,
+    };
+    
+    setMessages(prev => [...prev, finalMsg]);
+    setCurrentFormDefinition(null);
+    setPreviewLink(null);
+  };
+
+  return (
+    <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      
+      {/* Header simplifié */}
+      <div className="bg-white shadow-sm border-b p-4 flex-shrink-0">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Form Builder AI</h1>
+            {selectedTool && (
+              <p className="text-xs text-gray-500">
+                Outil : {selectedTool === 'google-forms' ? 'Google Forms' : selectedTool === 'tally' ? 'Tally' : selectedTool}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Contenu principal */}
+      <div className="flex-1 overflow-hidden">
+        {messages.length === 0 ? (
+          // Page d'accueil style Typeform
+          <div className="h-full flex items-center justify-center">
+            <div className="max-w-2xl w-full px-6">
+              <div className="text-center mb-8">
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                  What would you like to create?
+                </h1>
+                <p className="text-gray-600">
+                  Décris ton formulaire et je le créerai pour toi ✨
+                </p>
+              </div>
+              
+              <form onSubmit={handleSubmit} className="relative">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  placeholder="Type or paste your form questions..."
+                  className="w-full p-6 pr-16 border-2 border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none text-lg resize-none"
+                  rows={4}
+                  disabled={isLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isLoading}
+                  className="absolute bottom-6 right-6 p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          // Interface avec chat et preview
+          <div className="h-full flex">
+            {/* Preview à gauche (si active) */}
+            {showPreview && previewLink && (
+              <div className="w-1/2 border-r bg-white flex flex-col">
+                <div className="p-4 border-b bg-gray-50">
+                  <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <span className="text-xl">👁️</span>
+                    Prévisualisation
+                  </h2>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Voici à quoi ressemble ton formulaire
+                  </p>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <iframe
+                    src={previewLink}
+                    className="w-full h-full border-0"
+                    title="Form Preview"
+                  />
+                </div>
+                <div className="p-4 border-t bg-gray-50">
+                  <Button
+                    onClick={handleFinalizeForm}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    ✅ Finaliser et obtenir le lien
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Chat à droite (ou pleine largeur si pas de preview) */}
+            <div className={`flex flex-col ${showPreview ? 'w-1/2' : 'w-full'}`}>
+              <div className="flex-1 overflow-hidden">
+                <div className="h-full max-w-4xl mx-auto flex flex-col">
+          
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {messages.map((message) => (
+              <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
+                  
+                  {/* Avatar */}
+                  <div className={`flex items-start gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      message.role === 'user' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {message.role === 'user' ? '👤' : '🤖'}
+                    </div>
+                    
+                    <div className="flex-1">
+                      {/* Bulle de message */}
+                      <div className={`rounded-lg p-4 ${
+                        message.role === 'user' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white border shadow-sm'
+                      }`}>
+                        <div className="whitespace-pre-wrap">{message.content}</div>
+                        
+                        {/* Sélecteur d'outil */}
+                        {message.requiresToolSelection && (
+                          <div className="mt-4">
+                            <ToolSelector onSelectTool={handleToolSelection} />
+                          </div>
+                        )}
+
+                        {/* Formulaire de connexion à l'outil */}
+                        {message.requiresToolConnection && (
+                          <div className="mt-4">
+                            {message.requiresToolConnection === 'tally' && (
+                              <TallyConnectionCard
+                                userId={userId}
+                                isConnected={isTallyConnected}
+                                onConnect={() => {
+                                  setIsTallyConnected(true);
+                                  const successMsg: ChatMessage = {
+                                    id: Date.now().toString(),
+                                    role: 'assistant',
+                                    content: '🎉 Excellent ! Ton compte Tally est maintenant connecté. Décris-moi le formulaire que tu veux créer et je m\'en occupe !',
+                                    timestamp: new Date(),
+                                  };
+                                  setMessages(prev => [...prev, successMsg]);
+                                }}
+                                onDisconnect={() => {
+                                  setIsTallyConnected(false);
+                                }}
+                              />
+                            )}
+                            {message.requiresToolConnection === 'typeform' && (
+                              <TypeformConnectionCard
+                                userId={userId}
+                                isConnected={false} // TODO: Gérer l'état Typeform
+                                onConnect={() => {
+                                  const successMsg: ChatMessage = {
+                                    id: Date.now().toString(),
+                                    role: 'assistant',
+                                    content: '🎉 Génial ! Ton compte Typeform est connecté. Décris-moi maintenant le formulaire que tu souhaites créer !',
+                                    timestamp: new Date(),
+                                  };
+                                  setMessages(prev => [...prev, successMsg]);
+                                }}
+                                onDisconnect={() => {
+                                  // TODO: Gérer la déconnexion Typeform
+                                }}
+                              />
+                            )}
+                            {message.requiresToolConnection === 'google-forms' && (
+                              <GoogleFormsConnectionCard
+                                userId={userId}
+                                isConnected={isGoogleConnected}
+                                onConnect={() => {
+                                  console.log('🎉 onConnect callback triggered!');
+                                  setIsGoogleConnected(true);
+                                  
+                                  // Retirer le message de connexion requise
+                                  setMessages(prev => prev.filter(m => !m.requiresToolConnection));
+                                  
+                                  // Ajouter le message de succès
+                                  const successMsg: ChatMessage = {
+                                    id: Date.now().toString(),
+                                    role: 'assistant',
+                                    content: '🎉 Super ! Ton compte Google est connecté. Maintenant, décris-moi le formulaire que tu souhaites créer !',
+                                    timestamp: new Date(),
+                                  };
+                                  setMessages(prev => [...prev, successMsg]);
+                                }}
+                                onDisconnect={() => {
+                                  setIsGoogleConnected(false);
+                                }}
+                              />
+                            )}
+                            {message.requiresToolConnection === 'internal' && (
+                              <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                <p className="text-sm text-indigo-800 font-semibold mb-2">
+                                  ✅ Formulaire hébergé localement
+                                </p>
+                                <p className="text-xs text-indigo-700">
+                                  Aucune connexion nécessaire ! Le formulaire sera créé et hébergé directement sur cette application.
+                                  Décris-moi maintenant ce que tu veux créer.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Formulaire intégré dans le message - PRÉVISUALISATION */}
+                        {message.formDefinition && message.needsValidation && (
+                          <div className="mt-4 space-y-3">
+                            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                              <p className="text-sm font-semibold text-amber-800 mb-2">
+                                � Prévisualisation du formulaire
+                              </p>
+                              <p className="text-xs text-amber-700">
+                                Teste le formulaire ci-dessous. Si ça te convient, clique sur &quot;Valider et obtenir le lien&quot; pour le partager.
+                              </p>
+                            </div>
+                            
+                            <div className="p-4 bg-gray-50 rounded-lg border">
+                              {message.tallyFormId ? (
+                                <TallyPreview
+                                  formId={message.tallyFormId}
+                                  title={message.formDefinition.title}
+                                  height={500}
+                                />
+                              ) : message.shareableLink && selectedTool === 'google-forms' ? (
+                                // Afficher le lien Google Forms
+                                <div className="text-center p-8 space-y-4">
+                                  <div className="text-4xl">✅</div>
+                                  <p className="text-lg font-semibold text-green-700">
+                                    Formulaire Google créé avec succès !
+                                  </p>
+                                  <div className="mt-4 p-4 bg-white rounded-lg border-2 border-green-300">
+                                    <p className="text-sm font-medium text-gray-700 mb-2">
+                                      🔗 Lien du formulaire :
+                                    </p>
+                                    <a
+                                      href={message.shareableLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:underline text-sm break-all"
+                                    >
+                                      {message.shareableLink}
+                                    </a>
+                                    <div className="flex gap-2 mt-3">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(message.shareableLink!);
+                                          alert('Lien copié ! 📋');
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700"
+                                      >
+                                        📋 Copier le lien
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => window.open(message.shareableLink, '_blank')}
+                                        className="bg-green-600 hover:bg-green-700"
+                                      >
+                                        🚀 Ouvrir le formulaire
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-gray-600">
+                                    Partage ce lien pour que les gens puissent remplir ton formulaire !
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="text-center p-8">
+                                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                  <p className="text-sm text-gray-600">Création du formulaire...</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Bouton de validation uniquement pour Tally ou Internal */}
+                            {selectedTool !== 'google-forms' && (
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  onClick={() => handleValidateForm(message.id)}
+                                  disabled={isValidatingForm}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  {isValidatingForm ? (
+                                    <>
+                                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                      Création du lien...
+                                    </>
+                                  ) : (
+                                    <>✅ Valider et obtenir le lien</>
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Liens de partage - APRÈS VALIDATION */}
+                        {message.shortLink && !message.needsValidation && (
+                          <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                            <p className="text-sm font-semibold text-green-800 mb-2">🔗 Lien de partage :</p>
+                            <div className="flex gap-2 items-center">
+                              <input
+                                type="text"
+                                value={message.shortLink}
+                                readOnly
+                                className="flex-1 px-3 py-2 bg-white border rounded text-sm font-mono"
+                                onClick={(e) => (e.target as HTMLInputElement).select()}
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(message.shortLink!);
+                                  alert('Lien copié ! 📋');
+                                }}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                📋 Copier
+                              </Button>
+                            </div>
+                            <p className="text-xs text-green-700 mt-2">
+                              Partage ce lien pour collecter des réponses ! Demande-moi les statistiques quand tu veux. 📊
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Timestamp */}
+                      <div className={`text-xs mt-1 ${
+                        message.role === 'user' ? 'text-right text-gray-500' : 'text-left text-gray-500'
+                      }`}>
+                        {isMounted && message.timestamp.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {/* Indicateur de frappe */}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center">
+                    🤖
+                  </div>
+                  <div className="bg-white border shadow-sm rounded-lg p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                      <span className="text-sm text-gray-600">L&apos;assistant réfléchit...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input en bas */}
+          <div className="flex-shrink-0 border-t bg-white p-4">
+            <form onSubmit={handleSubmit} className="flex gap-3">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Écris ton message ici..."
+                disabled={isLoading}
+                className="flex-1 text-base"
+              />
+              <Button 
+                type="submit" 
+                disabled={!input.trim() || isLoading}
+                size="icon"
+                className="h-10 w-10"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}

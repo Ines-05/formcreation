@@ -77,16 +77,29 @@ ${conversationContext}
 
 Dernier message: ${message}
 
-Instructions:
+Instructions CRITIQUES:
 - Analyse TOUTE la conversation pour comprendre les besoins de l'utilisateur
 - Crée un formulaire complet et pertinent
-- Utilise des types de champs appropriés (text, email, number, textarea, select, radio, checkbox)
+- Utilise des types de champs appropriés:
+  * text: pour texte court (nom, prénom, ville, etc.)
+  * email: pour adresses email
+  * number: pour nombres (âge, téléphone, etc.)
+  * textarea: pour texte long (commentaires, description)
+  * select: pour liste déroulante (pays, profession, etc.)
+  * radio: pour choix unique entre plusieurs options (sexe, civilité, etc.)
+  * checkbox: pour sélection multiple
+
+- IMPORTANT pour les champs avec options (select, radio, checkbox):
+  * Tu DOIS TOUJOURS fournir au moins 2 options dans le tableau "options"
+  * Exemple pour sexe: { type: "radio", label: "Sexe", options: ["Homme", "Femme", "Autre"], required: true }
+  * Exemple pour pays: { type: "select", label: "Pays", options: ["France", "Belgique", "Suisse", "Canada"], required: true }
+  * JAMAIS un champ select/radio/checkbox sans options !
+
 - Inclus des labels clairs en français
-- Ajoute des placeholders utiles
+- Ajoute des placeholders utiles pour les champs texte
 - Marque les champs obligatoires avec required: true
-- Pour les champs select/radio/checkbox, fournis des options pertinentes basées sur le contexte
+- Les IDs doivent être en camelCase sans espaces (ex: "nomComplet", "adresseEmail")
 - Génère un titre et une description appropriés
-- Les IDs doivent être en camelCase sans espaces
 
 Assure-toi que le formulaire reflète exactement ce que l'utilisateur a exprimé dans la conversation.`,
         });
