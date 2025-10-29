@@ -109,7 +109,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=votre_clé_ai
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 
 # MongoDB (pour stocker les tokens)
-MONGODB_URI=mongodb://localhost:27017/ai-form-builder
+MONGODB_URI=mongodburi
 # OU MongoDB Atlas:
 # MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
 

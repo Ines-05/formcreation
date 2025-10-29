@@ -13,9 +13,75 @@ interface FormPreviewProps {
   onFinalize?: () => void;
 }
 
+// Fonction helper pour déterminer l'outil depuis l'URL
+const getToolName = (url: string) => {
+  if (url.includes('tally.so')) return 'Tally';
+  if (url.includes('typeform.com')) return 'Typeform';
+  if (url.includes('docs.google.com/forms')) return 'Google Forms';
+  return 'la plateforme';
+};
+
 export function FormPreview({ formDefinition, onClose, previewLink, isGenerating, onFinalize }: FormPreviewProps) {
   if (!formDefinition) return null;
 
+  // Si on a un lien, afficher le vrai formulaire en iframe
+  if (previewLink) {
+    return (
+      <div className="h-full flex flex-col bg-white border-l border-gray-200">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-500" />
+            <h3 className="font-semibold text-gray-900">Formulaire créé sur {getToolName(previewLink)}</h3>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Iframe du vrai formulaire */}
+        <div className="flex-1 overflow-hidden">
+          <iframe
+            src={previewLink}
+            className="w-full h-full border-0"
+            title="Formulaire"
+            allowFullScreen
+          />
+        </div>
+
+        {/* Footer avec lien */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 border-t border-gray-200 bg-blue-50"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-blue-700 font-medium mb-1">Formulaire créé !</p>
+              <p className="text-xs text-blue-600 truncate">{previewLink}</p>
+            </div>
+            <Button
+              asChild
+              size="sm"
+              className="bg-blue-500 hover:bg-blue-600 flex-shrink-0"
+            >
+              <a href={previewLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <ExternalLink className="w-4 h-4" />
+                Ouvrir
+              </a>
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Preview locale - rendu des champs
   const renderField = (field: FormField, index: number) => {
     return (
       <motion.div
@@ -123,26 +189,22 @@ export function FormPreview({ formDefinition, onClose, previewLink, isGenerating
           </AnimatePresence>
 
           {/* Bouton de soumission */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: formDefinition.fields.length * 0.1 + 0.2 }}
-          >
-            {!previewLink ? (
+          {!previewLink && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: formDefinition.fields.length * 0.1 + 0.2 }}
+            >
               <Button 
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white" 
                 size="lg"
                 onClick={onFinalize}
                 disabled={!onFinalize || isGenerating}
               >
-                {isGenerating ? 'Génération en cours...' : 'Valider et obtenir le lien'}
+                {isGenerating ? 'Création en cours...' : 'Valider et obtenir le lien'}
               </Button>
-            ) : (
-              <Button className="w-full bg-green-500 hover:bg-green-600 text-white" size="lg" disabled>
-                ✓ Formulaire créé !
-              </Button>
-            )}
-          </motion.div>
+            </motion.div>
+          )}
         </div>
       </div>
 
