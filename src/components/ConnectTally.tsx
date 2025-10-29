@@ -1,19 +1,29 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface ConnectTallyFormProps {
+interface TallyConnectionCardProps {
   userId: string;
-  onConnected?: () => void;
+  isConnected: boolean;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
 }
 
-export function ConnectTallyForm({ userId, onConnected }: ConnectTallyFormProps) {
+export function TallyConnectionCard({
+  userId,
+  isConnected,
+  onConnect,
+  onDisconnect,
+}: TallyConnectionCardProps) {
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showInput, setShowInput] = useState(false);
   const [error, setError] = useState('');
 
   const handleConnect = async () => {
@@ -32,63 +42,20 @@ export function ConnectTallyForm({ userId, onConnected }: ConnectTallyFormProps)
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to connect Tally API Key');
+        setError(data.error || 'Clé API invalide. Veuillez vérifier votre clé.');
         return;
       }
 
       console.log('✅ Tally connected successfully');
       setApiKey('');
-      onConnected?.();
+      onConnect?.();
     } catch (err) {
       console.error('Error connecting Tally:', err);
-      setError('Failed to connect. Please try again.');
+      setError('Erreur de connexion. Veuillez réessayer.');
     } finally {
       setIsConnecting(false);
     }
   };
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="tallyApiKey">Tally API Key</Label>
-        <Input
-          id="tallyApiKey"
-          type="password"
-          placeholder="tly-xxxxxxxxxxxxxxxxxxxxxx"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          disabled={isConnecting}
-          className="mt-1"
-        />
-        {error && (
-          <p className="text-sm text-red-600 mt-1">{error}</p>
-        )}
-      </div>
-      <Button
-        onClick={handleConnect}
-        disabled={!apiKey || isConnecting}
-        className="w-full"
-      >
-        {isConnecting ? '🔄 Connexion...' : '🔗 Connecter mon compte Tally'}
-      </Button>
-    </div>
-  );
-}
-
-interface TallyConnectionCardProps {
-  userId: string;
-  isConnected: boolean;
-  onConnect?: () => void;
-  onDisconnect?: () => void;
-}
-
-export function TallyConnectionCard({
-  userId,
-  isConnected,
-  onConnect,
-  onDisconnect,
-}: TallyConnectionCardProps) {
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const handleDisconnect = async () => {
     if (!confirm('Êtes-vous sûr de vouloir déconnecter votre compte Tally ?')) {
@@ -119,15 +86,11 @@ export function TallyConnectionCard({
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {isConnected ? '✅' : '🔗'} Compte Tally
-        </CardTitle>
-        <CardDescription>
-          {isConnected
-            ? 'Votre compte Tally est connecté. Les formulaires seront créés dans votre compte.'
-            : 'Connectez votre compte Tally pour créer des formulaires dans votre propre espace.'}
+    <Card className="w-full max-w-lg border-gray-200 shadow-sm rounded-xl">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">Connexion à Tally</CardTitle>
+        <CardDescription className="text-sm text-gray-600">
+          Pour obtenir votre clé API Tally, suivez ces étapes :
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -135,7 +98,7 @@ export function TallyConnectionCard({
           <div className="space-y-3">
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
-                ✅ Connecté avec succès
+                ✅ Connecté avec succès à Tally
               </p>
             </div>
             <Button
@@ -147,25 +110,75 @@ export function TallyConnectionCard({
               {isDisconnecting ? 'Déconnexion...' : 'Déconnecter'}
             </Button>
           </div>
-        ) : (
+        ) : !showInput ? (
           <div className="space-y-4">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="font-medium mb-2 text-sm">Comment obtenir votre API Key Tally :</h4>
-              <ol className="text-sm space-y-1 text-gray-700 list-decimal list-inside">
-                <li>Allez sur <a href="https://tally.so" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">tally.so</a></li>
-                <li>Cliquez sur votre avatar → "Settings"</li>
-                <li>Allez dans "API keys"</li>
-                <li>Cliquez "Create API key"</li>
-                <li>Copiez la clé et collez-la ci-dessous</li>
+            <div className="text-sm text-gray-700 space-y-2">
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Connectez-vous à votre compte <a href="https://tally.so" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Tally</a></li>
+                <li>Allez dans les <strong>Settings</strong></li>
+                <li>Accédez à la section <strong>API keys</strong></li>
+                <li>Cliquez sur <strong>Create API key</strong></li>
+                <li>Copiez la clé générée et revenez ici pour la coller</li>
               </ol>
             </div>
-            <ConnectTallyForm userId={userId} onConnected={onConnect} />
-            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-xs text-green-800">
-                ✅ Les formulaires seront créés dans votre compte Tally personnel
-              </p>
-            </div>
+            
+            <Button
+              onClick={() => setShowInput(true)}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+              size="lg"
+            >
+              Entrer ma clé API
+            </Button>
           </div>
+        ) : (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-3"
+          >
+            <div>
+              <Input
+                id="tallyApiKey"
+                type="text"
+                placeholder="Entrer votre clé API pour l'authentification"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                disabled={isConnecting}
+                className="w-full"
+                autoFocus
+              />
+              {error && (
+                <motion.p 
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-sm text-red-600 mt-2"
+                >
+                  {error}
+                </motion.p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleConnect}
+                disabled={!apiKey || isConnecting}
+                className="flex-1 bg-blue-500 hover:bg-blue-600"
+              >
+                {isConnecting ? 'Connexion...' : 'Connecter'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowInput(false);
+                  setApiKey('');
+                  setError('');
+                }}
+                variant="outline"
+                disabled={isConnecting}
+              >
+                Annuler
+              </Button>
+            </div>
+          </motion.div>
         )}
       </CardContent>
     </Card>

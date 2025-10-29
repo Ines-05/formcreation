@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { hasValidTypeformTokens } from '@/lib/typeform-tokens';
 
 /**
  * Endpoint pour vérifier si un utilisateur a connecté son compte Typeform
@@ -17,9 +18,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: Vérifier dans la DB si l'utilisateur a des tokens Typeform valides
-    // const isConnected = await hasValidTypeformTokens(userId);
-    const isConnected = false; // Pour l'instant, toujours false
+    // Vérifier dans la DB si l'utilisateur a des tokens Typeform valides
+    const isConnected = await hasValidTypeformTokens(userId);
 
     return NextResponse.json({
       isConnected,

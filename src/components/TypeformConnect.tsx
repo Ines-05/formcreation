@@ -165,8 +165,8 @@ export function TypeformConnectionCard({
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
+    <Card className="w-full max-w-lg border-gray-200 shadow-sm rounded-xl">
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           {isConnected ? '✅' : '🔗'} Compte Typeform
         </CardTitle>

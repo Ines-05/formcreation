@@ -1,4 +1,4 @@
-import { generateText, generateObject } from 'ai';
+import { generateText, generateObject, streamText } from 'ai';
 import { formModel } from '@/lib/ai';
 import { z } from 'zod';
 
@@ -71,37 +71,61 @@ Critères pour "NON":
         const { object: formDefinition } = await generateObject({
           model: formModel,
           schema: FormDefinitionSchema,
-          prompt: `Basé sur cette conversation complète, génère un formulaire approprié:
+          prompt: `Tu es un expert en création de formulaires. Génère un formulaire basé sur cette conversation:
 
 ${conversationContext}
 
 Dernier message: ${message}
 
-Instructions CRITIQUES:
-- Analyse TOUTE la conversation pour comprendre les besoins de l'utilisateur
-- Crée un formulaire complet et pertinent
-- Utilise des types de champs appropriés:
-  * text: pour texte court (nom, prénom, ville, etc.)
-  * email: pour adresses email
-  * number: pour nombres (âge, téléphone, etc.)
-  * textarea: pour texte long (commentaires, description)
-  * select: pour liste déroulante (pays, profession, etc.)
-  * radio: pour choix unique entre plusieurs options (sexe, civilité, etc.)
-  * checkbox: pour sélection multiple
+RÈGLES INTELLIGENTES DE GÉNÉRATION:
 
-- IMPORTANT pour les champs avec options (select, radio, checkbox):
-  * Tu DOIS TOUJOURS fournir au moins 2 options dans le tableau "options"
-  * Exemple pour sexe: { type: "radio", label: "Sexe", options: ["Homme", "Femme", "Autre"], required: true }
-  * Exemple pour pays: { type: "select", label: "Pays", options: ["France", "Belgique", "Suisse", "Canada"], required: true }
-  * JAMAIS un champ select/radio/checkbox sans options !
+1. **DÉTECTION AUTOMATIQUE DES TYPES**:
+   - "Nom", "Prénom", "Titre", "Ville" → text (REQUIS si c'est un champ d'identification)
+   - "Email", "E-mail", "Adresse email" → email (TOUJOURS REQUIS)
+   - "Téléphone", "Tel", "Mobile" → text (pas number !)
+   - "Âge", "Nombre", "Quantité" → number
+   - "Date de naissance", "Date" → text avec placeholder
+   - "Commentaire", "Description", "Avis", "Message" → textarea
+   - Tout ce qui implique un niveau/satisfaction/note → radio avec options pertinentes
+   - Spécialité/Domaine/Catégorie → radio ou select avec options du domaine
+   - Préférences/Intérêts multiples → checkbox avec options
+   - Questions Oui/Non → radio avec ["Oui", "Non"]
 
-- Inclus des labels clairs en français
-- Ajoute des placeholders utiles pour les champs texte
-- Marque les champs obligatoires avec required: true
-- Les IDs doivent être en camelCase sans espaces (ex: "nomComplet", "adresseEmail")
-- Génère un titre et une description appropriés
+2. **GÉNÉRATION AUTOMATIQUE DES OPTIONS** (OBLIGATOIRE pour select/radio/checkbox):
+   - "Sexe"/"Genre" → radio: ["Homme", "Femme", "Autre"]
+   - "Civilité" → select: ["M.", "Mme", "Mlle"]
+   - "Satisfaction" → radio: ["Très satisfait", "Satisfait", "Peu satisfait", "Pas satisfait"]
+   - "Spécialité UI/UX" → radio: ["UI Design", "UX Design", "UI/UX Design", "Autre"]
+   - "Expérience" → radio: ["Débutant", "Intermédiaire", "Avancé", "Expert"]
+   - "Taille entreprise" → select: ["1-10", "11-50", "51-200", "200+"]
+   - "Pays" → select: ["France", "Belgique", "Suisse", "Canada", "Autre"]
+   
+   **IMPORTANT**: Adapte les options au contexte de la demande !
 
-Assure-toi que le formulaire reflète exactement ce que l'utilisateur a exprimé dans la conversation.`,
+3. **CHAMPS REQUIS AUTOMATIQUES**:
+   - Nom, Prénom, Email: TOUJOURS required: true
+   - Champs essentiels au contexte du formulaire: required: true
+   - Champs optionnels (commentaires, suggestions): required: false
+
+4. **BONNES PRATIQUES**:
+   - Labels clairs en français
+   - Placeholders utiles (ex: "Votre nom complet", "exemple@email.com")
+   - IDs en camelCase (ex: "nomComplet", "adresseEmail", "niveauSatisfaction")
+   - Titre et description pertinents au contexte
+
+5. **EXEMPLES CONCRETS**:
+   - Si l'utilisateur dit "spécialité UI UX" → crée un radio avec options appropriées
+   - Si l'utilisateur dit "niveau d'expérience" → crée un radio avec niveaux
+   - Si l'utilisateur dit "commentaires" → crée un textarea
+   - Si l'utilisateur dit "email" → type email avec required: true
+
+**CRITIQUES**:
+- JAMAIS de select/radio/checkbox sans options
+- TOUJOURS au moins 2 options pour les champs à choix
+- Les téléphones sont text, PAS number
+- Sois INTELLIGENT: déduis le type et les options du contexte
+
+Génère maintenant le formulaire qui correspond EXACTEMENT aux besoins exprimés.`,
         });
 
         // Générer un message d'accompagnement personnalisé (SANS créer le lien maintenant)

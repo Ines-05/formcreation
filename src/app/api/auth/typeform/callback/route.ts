@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { saveTypeformTokens } from '@/lib/typeform-tokens';
 
 /**
  * Endpoint pour gérer le callback OAuth Typeform
@@ -90,8 +91,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Sauvegarder les tokens dans la base de données
-    // TODO: Implémenter la sauvegarde dans MongoDB
-    // await saveTypeformTokens(userId, tokenData);
+    await saveTypeformTokens(userId, tokenData);
 
     console.log('✅ Typeform OAuth successful for user:', userId);
 

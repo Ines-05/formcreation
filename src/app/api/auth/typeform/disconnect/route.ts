@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { deleteTypeformTokens } from '@/lib/typeform-tokens';
 
 /**
  * Endpoint pour déconnecter le compte Typeform
@@ -17,8 +18,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Supprimer les tokens Typeform de la DB
-    // await removeTypeformTokens(userId);
+    // Supprimer les tokens Typeform de la DB
+    await deleteTypeformTokens(userId);
 
     console.log('✅ Typeform account disconnected for user:', userId);
 
