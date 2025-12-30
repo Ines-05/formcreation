@@ -13,7 +13,6 @@ const UserTallyApiKeySchema = new Schema<IUserTallyApiKey>({
     type: String,
     required: true,
     unique: true,
-    index: true,
   },
   tallyApiKey: {
     type: String,
@@ -37,5 +36,5 @@ const UserTallyApiKeySchema = new Schema<IUserTallyApiKey>({
 // Index pour optimiser les recherches
 UserTallyApiKeySchema.index({ userId: 1, isActive: 1 });
 
-export const UserTallyApiKey = mongoose.models.UserTallyApiKey || 
+export const UserTallyApiKey = mongoose.models.UserTallyApiKey ||
   mongoose.model<IUserTallyApiKey>('UserTallyApiKey', UserTallyApiKeySchema);

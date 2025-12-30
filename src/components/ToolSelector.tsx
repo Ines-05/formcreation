@@ -1,11 +1,16 @@
 'use client';
 
-import { Card, CardContent } from '@/components/ui/card';
+
+import Image from 'next/image';
+import { motion } from 'motion/react';
+import { Check } from 'lucide-react';
 
 export type FormTool = 'tally' | 'typeform' | 'google-forms' | 'internal';
 
 interface ToolSelectorProps {
   onSelectTool: (tool: FormTool) => void;
+  title?: string;
+  description?: string;
 }
 
 const tools = [
@@ -13,78 +18,91 @@ const tools = [
     id: 'google-forms' as FormTool,
     name: 'Google Forms',
     description: 'Gratuit et simple d\'utilisation',
-    icon: '📄',
-    bgColor: 'bg-purple-100',
-    iconColor: 'text-purple-600',
+    logo: '/googeform.png',
     features: ['Formulaires simples', 'Intégration Google'],
   },
   {
     id: 'tally' as FormTool,
     name: 'Tally',
     description: 'Simple, gratuit et puissant',
-    icon: '📋',
-    bgColor: 'bg-pink-100',
-    iconColor: 'text-pink-600',
+    logo: '/logo_v2.png',
     features: ['Formulaires simples', 'Interface moderne'],
   },
   {
     id: 'typeform' as FormTool,
     name: 'Typeform',
     description: 'Expérience interactive et engageante',
-    icon: '🔶',
-    bgColor: 'bg-orange-100',
-    iconColor: 'text-orange-600',
+    logo: '/typeformlogo.jpg',
     features: ['Design élégant', 'Expérience utilisateur'],
   },
 ];
 
-export function ToolSelector({ onSelectTool }: ToolSelectorProps) {
+export function ToolSelector({
+  onSelectTool,
+  title = "Sur quelle plateforme veux-tu créer ton formulaire ?",
+  description = "Choisis l'outil qui te convient le mieux"
+}: ToolSelectorProps) {
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 w-full">
-      <div className="mb-6">
-        <h3 className="text-base font-medium text-gray-900 mb-1">
-          Sur quelle plateforme veux-tu créer ton formulaire ?
+    <div className="glass-card p-6 w-full relative overflow-hidden">
+      {/* Glow effect */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
+
+      <div className="mb-6 relative z-10">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          {title}
         </h3>
-        <p className="text-sm text-gray-600">
-          Choisis l&apos;outil qui te convient le mieux
+        <p className="text-sm text-gray-500">
+          {description}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {tools.map((tool) => (
-          <button
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+        {tools.map((tool, index) => (
+          <motion.button
             key={tool.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
             onClick={() => onSelectTool(tool.id)}
-            className="bg-white border-2 border-gray-200 rounded-xl p-5 hover:border-blue-400 hover:shadow-md transition-all text-center group"
+            className="group relative bg-white/50 hover:bg-white border text-left border-white/60 hover:border-primary/50 text-foreground rounded-xl p-5 shadow-sm hover:shadow-xl transition-all duration-300"
           >
-            {/* Icône */}
-            <div className={`w-14 h-14 ${tool.bgColor} rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
-              <span className={`text-2xl ${tool.iconColor}`}>{tool.icon}</span>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
 
-            {/* Nom */}
-            <h4 className="font-semibold text-gray-900 mb-2 text-sm">{tool.name}</h4>
-            
-            {/* Description */}
-            <p className="text-xs text-gray-600 mb-3">{tool.description}</p>
+            <div className="relative z-10 flex flex-col h-full">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-gray-100 p-2 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <div className="relative w-8 h-8">
+                    <Image
+                      src={tool.logo}
+                      alt={`${tool.name} logo`}
+                      fill
+                      className="object-contain"
+                      sizes="32px"
+                    />
+                  </div>
+                </div>
+                <div className="w-5 h-5 rounded-full border-2 border-gray-200 group-hover:border-primary group-hover:bg-primary text-white flex items-center justify-center transition-colors">
+                  <Check className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
 
-            {/* Features */}
-            <div className="flex flex-wrap gap-1.5 justify-center mb-3">
-              {tool.features.map((feature, idx) => (
-                <span
-                  key={idx}
-                  className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md"
-                >
-                  {feature}
-                </span>
-              ))}
-            </div>
+              {/* Content */}
+              <div className="flex-1">
+                <h4 className="font-bold text-gray-900 mb-1">{tool.name}</h4>
+                <p className="text-xs text-gray-500 mb-4 line-clamp-2 leading-relaxed">{tool.description}</p>
+              </div>
 
-            {/* Radio button placeholder */}
-            <div className="flex justify-center">
-              <div className="w-5 h-5 rounded-full border-2 border-gray-300 group-hover:border-blue-500 transition-colors"></div>
+              {/* Footer/Features */}
+              <div className="flex flex-wrap gap-1.5 pt-3 border-t border-gray-100/50">
+                {tool.features.map((feature, i) => (
+                  <span key={i} className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground bg-secondary/50 px-2 py-1 rounded-md">
+                    {feature}
+                  </span>
+                ))}
+              </div>
             </div>
-          </button>
+          </motion.button>
         ))}
       </div>
     </div>

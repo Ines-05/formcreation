@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 interface TypeformConnectProps {
   userId: string;
   onConnected?: () => void;
+  onCancel?: () => void;
 }
 
-export function TypeformConnect({ userId, onConnected }: TypeformConnectProps) {
+export function TypeformConnect({ userId, onConnected, onCancel }: TypeformConnectProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
 
@@ -112,10 +113,15 @@ export function TypeformConnect({ userId, onConnected }: TypeformConnectProps) {
         )}
       </Button>
 
-      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-xs text-green-800">
-          ✅ Vos formulaires seront créés directement dans votre compte Typeform
-        </p>
+      <div className="flex gap-2">
+        <Button
+          onClick={() => onCancel?.()}
+          variant="outline"
+          disabled={isConnecting}
+          className="w-full"
+        >
+          Annuler
+        </Button>
       </div>
     </div>
   );
@@ -126,6 +132,7 @@ interface TypeformConnectionCardProps {
   isConnected: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  onCancel?: () => void;
 }
 
 export function TypeformConnectionCard({
@@ -133,8 +140,24 @@ export function TypeformConnectionCard({
   isConnected,
   onConnect,
   onDisconnect,
+  onCancel,
 }: TypeformConnectionCardProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isNowConnected, setIsNowConnected] = useState(isConnected);
+
+  const handleLocalConnect = () => {
+    setIsNowConnected(true);
+    if (onConnect) {
+      onConnect();
+    }
+  };
+
+  const handleLocalDisconnect = () => {
+    setIsNowConnected(false);
+    if (onDisconnect) {
+      onDisconnect();
+    }
+  };
 
   const handleDisconnect = async () => {
     if (!confirm('Êtes-vous sûr de vouloir déconnecter votre compte Typeform ?')) {
@@ -152,7 +175,7 @@ export function TypeformConnectionCard({
       });
 
       if (response.ok) {
-        onDisconnect?.();
+        handleLocalDisconnect();
       } else {
         alert('Erreur lors de la déconnexion');
       }
@@ -168,16 +191,16 @@ export function TypeformConnectionCard({
     <Card className="w-full max-w-lg border-gray-200 shadow-sm rounded-xl">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
-          {isConnected ? '✅' : '🔗'} Compte Typeform
+          {isNowConnected ? '✅' : '🔗'} Compte Typeform
         </CardTitle>
         <CardDescription>
-          {isConnected
+          {isNowConnected
             ? 'Votre compte Typeform est connecté. Les formulaires seront créés dans votre compte.'
             : 'Connectez votre compte Typeform pour créer des formulaires dans votre espace.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isConnected ? (
+        {isNowConnected ? (
           <div className="space-y-3">
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
@@ -194,7 +217,7 @@ export function TypeformConnectionCard({
             </Button>
           </div>
         ) : (
-          <TypeformConnect userId={userId} onConnected={onConnect} />
+          <TypeformConnect userId={userId} onConnected={handleLocalConnect} onCancel={onCancel} />
         )}
       </CardContent>
     </Card>

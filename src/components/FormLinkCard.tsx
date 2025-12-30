@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, ExternalLink, Copy } from 'lucide-react';
+import { CheckCircle, ExternalLink, Copy, PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
 import { useState } from 'react';
@@ -30,65 +30,70 @@ export function FormLinkCard({ link, tool = 'tally' }: FormLinkCardProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4 sm:p-6 shadow-sm"
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="relative overflow-hidden rounded-2xl shadow-xl"
     >
-      {/* Header avec icône de succès */}
-      <div className="flex items-start sm:items-center gap-3 mb-4">
-        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-          <CheckCircle className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-90 blur-sm" />
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+
+      <div className="relative p-6 sm:p-8 backdrop-blur-md bg-white/10 text-white">
+        {/* Header avec icône de succès */}
+        <div className="flex flex-col items-center text-center gap-4 mb-6">
+          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm shadow-inner ring-4 ring-white/10 animate-pulse">
+            <PartyPopper className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h3 className="font-bold text-2xl mb-1">C'est prêt ! 🎉</h3>
+            <p className="text-emerald-100 text-sm">Votre formulaire {getToolName()} est en ligne.</p>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-blue-900 text-base sm:text-lg">Formulaire créé avec succès !</h3>
-          <p className="text-xs sm:text-sm text-blue-700">Votre formulaire est maintenant en ligne</p>
+
+        {/* Lien */}
+        <div className="bg-white/10 rounded-xl p-4 border border-white/20 mb-6 backdrop-blur-md">
+          <p className="text-xs text-emerald-100 mb-2 font-medium uppercase tracking-wider opacity-80">Lien de partage</p>
+          <div className="flex flex-col gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={link}
+                readOnly
+                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm font-mono text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 truncate"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleCopy}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white border-none shadow-none"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                {copied ? 'Copié !' : 'Copier'}
+              </Button>
+              <Button
+                asChild
+                className="flex-[2] bg-white text-emerald-600 hover:bg-emerald-50 font-semibold shadow-lg"
+                size="sm"
+              >
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Ouvrir le formulaire
+                </a>
+              </Button>
+            </div>
+          </div>
         </div>
+
+        {/* Message d'encouragement */}
+        <p className="text-xs text-emerald-100/70 text-center">
+          Envoyez ce lien à votre audience pour collecter des réponses.
+        </p>
       </div>
-
-      {/* Lien */}
-      <div className="bg-white rounded-lg border border-blue-200 p-3 sm:p-4 mb-4">
-        <p className="text-xs text-gray-500 mb-2 font-medium">Lien de partage :</p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <input
-            type="text"
-            value={link}
-            readOnly
-            className="flex-1 min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-xs sm:text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onClick={(e) => (e.target as HTMLInputElement).select()}
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCopy}
-            className={`flex items-center justify-center gap-2 flex-shrink-0 ${copied ? 'bg-blue-100 border-blue-300' : ''}`}
-          >
-            <Copy className="w-4 h-4" />
-            <span className="text-xs sm:text-sm">{copied ? 'Copié !' : 'Copier'}</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Bouton d'ouverture */}
-      <Button
-        asChild
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-        size="lg"
-      >
-        <a 
-          href={link} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 text-sm sm:text-base"
-        >
-          <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="truncate">Ouvrir dans {getToolName()}</span>
-        </a>
-      </Button>
-
-      {/* Message d'encouragement */}
-      <p className="text-xs text-blue-700 text-center mt-3">
-        Partagez ce lien pour commencer à collecter des réponses ! 📊
-      </p>
     </motion.div>
   );
 }

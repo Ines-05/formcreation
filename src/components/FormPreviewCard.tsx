@@ -1,7 +1,7 @@
 'use client';
 
 import { FormDefinition } from '@/lib/types';
-import { ChevronRight, FileText } from 'lucide-react';
+import { ChevronRight, FileText, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface FormPreviewCardProps {
@@ -11,55 +11,60 @@ interface FormPreviewCardProps {
 
 export function FormPreviewCard({ formDefinition, onExpand }: FormPreviewCardProps) {
   const fieldCount = formDefinition.fields.length;
-  
+
   return (
     <motion.button
       onClick={onExpand}
-      className="w-full bg-white border-2 border-gray-200 hover:border-blue-400 rounded-lg p-3 sm:p-4 transition-all hover:shadow-md group text-left"
+      className="w-full glass-card hover:border-primary/50 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 group text-left relative overflow-hidden"
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
     >
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Icône */}
-        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-          <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+      <div className="flex items-center gap-4 relative z-10">
+        {/* Icon */}
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/25 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+          <FileText className="w-6 h-6 text-white" />
         </div>
-        
-        {/* Contenu */}
+
+        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h3 className="font-semibold text-gray-900 truncate text-sm sm:text-base">
-              {formDefinition.title || 'Nouveau formulaire'}
-            </h3>
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded flex-shrink-0">
-              {fieldCount} champ{fieldCount > 1 ? 's' : ''}
-            </span>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-gray-900 truncate text-base group-hover:text-primary transition-colors">
+                {formDefinition.title || 'Nouveau formulaire'}
+              </h3>
+              {/* Badge */}
+              <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                Generated
+              </span>
+            </div>
           </div>
-          
-          {formDefinition.description && (
-            <p className="text-xs sm:text-sm text-gray-600 truncate mb-2">
-              {formDefinition.description}
-            </p>
-          )}
-          
-          {/* Aperçu des champs */}
-          <div className="flex items-center gap-1 sm:gap-2 text-xs text-gray-500 flex-wrap">
+
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <span className="font-medium">{fieldCount} questions</span>
+            <span className="w-1 h-1 bg-gray-300 rounded-full" />
+            <span className="truncate max-w-[200px]">{formDefinition.description || 'Pas de description'}</span>
+          </div>
+
+          {/* Fields Preview */}
+          <div className="flex items-center gap-1.5 flex-wrap">
             {formDefinition.fields.slice(0, 3).map((field, i) => (
-              <span key={i} className="flex items-center gap-1">
-                <span className="w-1 h-1 bg-gray-400 rounded-full" />
-                <span className="truncate max-w-[80px] sm:max-w-none">{field.label}</span>
+              <span key={i} className="px-2 py-1 bg-secondary rounded-md text-xs text-secondary-foreground border border-gray-100">
+                {field.label}
               </span>
             ))}
             {fieldCount > 3 && (
-              <span className="text-gray-400">+{fieldCount - 3}</span>
+              <span className="text-xs text-gray-400 font-medium">+{fieldCount - 3} de plus</span>
             )}
           </div>
         </div>
-        
-        {/* Flèche */}
-        <div className="flex-shrink-0">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-100 group-hover:bg-blue-500 flex items-center justify-center transition-colors">
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-white transition-colors" />
+
+        {/* Arrow */}
+        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0 duration-300">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <ChevronRight className="w-5 h-5 text-primary" />
           </div>
         </div>
       </div>

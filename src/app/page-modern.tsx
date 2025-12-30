@@ -41,6 +41,81 @@ export default function Home() {
   const [previewLink, setPreviewLink] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isMultiline, setIsMultiline] = useState(false);
+
+  const formatInline = (inputText: string) => {
+    const parts: any[] = [];
+    const regex = /(\*\*[^*]+\*\*)|(\*[^*]+\*)|(`[^`]+`)/g;
+    let match: RegExpExecArray | null;
+    let lastIndex = 0;
+    while ((match = regex.exec(inputText)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(inputText.slice(lastIndex, match.index));
+      }
+      const token = match[0];
+      if (token.startsWith('**')) {
+        parts.push(<strong key={parts.length}>{token.slice(2, -2)}</strong>);
+      } else if (token.startsWith('*')) {
+        parts.push(<em key={parts.length}>{token.slice(1, -1)}</em>);
+      } else if (token.startsWith('`')) {
+        parts.push(<code key={parts.length} className="px-1 py-0.5 rounded bg-gray-100">{token.slice(1, -1)}</code>);
+      }
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < inputText.length) {
+      parts.push(inputText.slice(lastIndex));
+    }
+    return parts;
+  };
+
+  const renderMarkdown = (text: string) => {
+    const lines = text.split(/\r?\n/);
+    const elements: any[] = [];
+    let listItems: string[] = [];
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        elements.push(
+          <ul key={`ul-${elements.length}`} className="list-disc pl-6 space-y-1">
+            {listItems.map((li, idx) => (
+              <li key={idx}>{formatInline(li)}</li>
+            ))}
+          </ul>
+        );
+        listItems = [];
+      }
+    };
+
+    lines.forEach((line) => {
+      const bullet = line.match(/^\s*[-*]\s+(.*)$/);
+      if (bullet) {
+        listItems.push(bullet[1]);
+        return;
+      }
+      if (line.trim() === '') {
+        flushList();
+        elements.push(<div key={`br-${elements.length}`} className="h-2" />);
+        return;
+      }
+      flushList();
+      elements.push(
+        <p key={`p-${elements.length}`} className="leading-relaxed">
+          {formatInline(line)}
+        </p>
+      );
+    });
+    flushList();
+    return <>{elements}</>;
+  };
+
+  const autoResizeInput = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+    setIsMultiline(el.scrollHeight > 56 || el.value.includes('\n'));
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -443,7 +518,7 @@ export default function Home() {
 
           {/* Chat à droite (ou pleine largeur si pas de preview) */}
           <div className={`flex flex-col ${showPreview ? 'w-1/2' : 'w-full'}`}>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl mx-auto w-full">
               {messages.map((message, index) => (
                 <motion.div 
                   key={message.id} 
@@ -477,7 +552,7 @@ export default function Home() {
                           }`}
                           whileHover={{ scale: 1.02 }}
                         >
-                          <div className="whitespace-pre-wrap">{message.content}</div>
+                          <div className="whitespace-pre-wrap">{renderMarkdown(message.content)}</div>
                           
                           {/* Sélecteur d'outil */}
                           {message.requiresToolSelection && (
@@ -608,19 +683,29 @@ export default function Home() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <form onSubmit={handleSubmit} className="flex gap-2">
-                <input
-                  type="text"
+              <form onSubmit={handleSubmit} className="max-w-3xl mx-auto w-full flex items-center gap-2">
+                <textarea
+                  ref={inputRef}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Tape ton message..."
-                  className="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => { setInput(e.target.value); autoResizeInput(); }}
+                  onInput={autoResizeInput}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (input.trim() && !isLoading) {
+                        (e.currentTarget as HTMLTextAreaElement).form?.requestSubmit();
+                      }
+                    }
+                  }}
+                  placeholder="Décrivez votre formulaire..."
+                  rows={1}
+                  className={`flex-1 resize-none overflow-hidden h-12 md:h-14 px-5 md:px-6 py-3 md:py-4 border ${isMultiline ? 'rounded-lg' : 'rounded-full'} bg-gray-50 placeholder-gray-400 text-[15px] md:text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
                   disabled={isLoading}
                 />
                 <Button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="bg-purple-600 hover:bg-purple-700 px-6"
+                  className="h-12 md:h-14 px-5 md:px-6 rounded-full bg-purple-600 hover:bg-purple-700"
                 >
                   <Send className="w-5 h-5" />
                 </Button>

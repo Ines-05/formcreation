@@ -1,8 +1,9 @@
 // Types pour les champs de formulaire
 export interface FormField {
   id: string;
-  type: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox';
+  type: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'section';
   label: string;
+  description?: string;
   placeholder?: string;
   required?: boolean;
   options?: string[]; // Pour select, radio, checkbox

@@ -12,6 +12,7 @@ interface TallyConnectionCardProps {
   isConnected: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  onCancel?: () => void;
 }
 
 export function TallyConnectionCard({
@@ -19,12 +20,28 @@ export function TallyConnectionCard({
   isConnected,
   onConnect,
   onDisconnect,
+  onCancel,
 }: TallyConnectionCardProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [error, setError] = useState('');
+  const [isNowConnected, setIsNowConnected] = useState(isConnected);
+
+  const handleLocalConnect = () => {
+    setIsNowConnected(true);
+    if (onConnect) {
+      onConnect();
+    }
+  };
+
+  const handleLocalDisconnect = () => {
+    setIsNowConnected(false);
+    if (onDisconnect) {
+      onDisconnect();
+    }
+  };
 
   const handleConnect = async () => {
     setError('');
@@ -48,7 +65,7 @@ export function TallyConnectionCard({
 
       console.log('✅ Tally connected successfully');
       setApiKey('');
-      onConnect?.();
+      handleLocalConnect();
     } catch (err) {
       console.error('Error connecting Tally:', err);
       setError('Erreur de connexion. Veuillez réessayer.');
@@ -73,7 +90,7 @@ export function TallyConnectionCard({
       });
 
       if (response.ok) {
-        onDisconnect?.();
+        handleLocalDisconnect();
       } else {
         alert('Erreur lors de la déconnexion');
       }
@@ -90,11 +107,13 @@ export function TallyConnectionCard({
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold">Connexion à Tally</CardTitle>
         <CardDescription className="text-sm text-gray-600">
-          Pour obtenir votre clé API Tally, suivez ces étapes :
+          {isNowConnected 
+            ? 'Votre compte Tally est connecté.'
+            : 'Pour obtenir votre clé API Tally, suivez ces étapes :'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isConnected ? (
+        {isNowConnected ? (
           <div className="space-y-3">
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
@@ -122,13 +141,21 @@ export function TallyConnectionCard({
               </ol>
             </div>
             
-            <Button
-              onClick={() => setShowInput(true)}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-              size="lg"
-            >
-              Entrer ma clé API
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowInput(true)}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                size="lg"
+              >
+                Entrer ma clé API
+              </Button>
+              <Button
+                onClick={() => onCancel?.()}
+                variant="outline"
+              >
+                Annuler
+              </Button>
+            </div>
           </div>
         ) : (
           <motion.div
@@ -171,6 +198,7 @@ export function TallyConnectionCard({
                   setShowInput(false);
                   setApiKey('');
                   setError('');
+                  onCancel?.();
                 }}
                 variant="outline"
                 disabled={isConnecting}

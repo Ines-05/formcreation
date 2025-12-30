@@ -23,7 +23,6 @@ const UserTypeformTokensSchema = new Schema<IUserTypeformTokens>(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     accessToken: {
       type: String,

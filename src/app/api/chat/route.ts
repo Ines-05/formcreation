@@ -50,10 +50,55 @@ Exemples NON:
 
     const shouldStartFormCreation = intentResult.toLowerCase().startsWith('oui');
 
+    // Toujours détecter quel outil l'utilisateur a mentionné (création OU changement)
+    const toolDetectionPrompt = `Analyse ce message pour déterminer quel outil de création de formulaires l'utilisateur veut utiliser.
+
+Message: ${message}
+
+Réponds UNIQUEMENT avec l'un de ces mots exactement:
+- "typeform" (si l'utilisateur mentionne Typeform)
+- "google" (si l'utilisateur mentionne Google Forms)
+- "tally" (si l'utilisateur mentionne Tally)
+- "aucun" (si l'utilisateur ne mentionne aucun outil spécifique)
+
+Exemples:
+- "je veux créer un formulaire avec typeform" → "typeform"
+- "un sondage sur google forms" → "google"
+- "faire un formulaire tally" → "tally"
+- "crée-moi un formulaire" → "aucun"
+- "finalement je préfère google forms" → "google"
+- "switch à tally plutôt" → "tally"`;
+
+    const { text: toolResult } = await generateText({
+      model: formModel,
+      prompt: toolDetectionPrompt,
+    });
+
+    const detectedTool = toolResult.toLowerCase().trim();
+    const toolMap: { [key: string]: 'typeform' | 'google' | 'tally' | null } = {
+      'typeform': 'typeform',
+      'google': 'google',
+      'tally': 'tally',
+      'aucun': null,
+    };
+
+    const tool = toolMap[detectedTool] || null;
+
     if (shouldStartFormCreation) {
       // L'utilisateur veut créer un formulaire
       return Response.json({ 
         shouldStartFormCreation: true,
+        detectedTool: tool,
+        reply: null
+      });
+    }
+
+    // Vérifier aussi si l'utilisateur change d'outil sans intention de création explicite
+    if (tool && !shouldStartFormCreation) {
+      // L'utilisateur mentionne un outil → potentiellement un changement d'outil
+      return Response.json({ 
+        shouldStartFormCreation: false,
+        detectedTool: tool,
         reply: null
       });
     }

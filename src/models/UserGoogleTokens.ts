@@ -24,7 +24,6 @@ const UserGoogleTokensSchema = new Schema<IUserGoogleTokens>(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     accessToken: {
       type: String,

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTypeform } from '@/lib/typeform';
 import { getTypeformTokens, refreshTypeformAccessToken } from '@/lib/typeform-tokens';
 import { FormDefinition } from '@/lib/types';
+import { connectDB } from '@/lib/mongodb';
+import { Form } from '@/models/Form';
 
 /**
  * Endpoint pour créer un formulaire Typeform
@@ -12,6 +14,9 @@ import { FormDefinition } from '@/lib/types';
 export async function POST(request: NextRequest) {
   try {
     console.log('🎯 API Typeform - Début de la création');
+    
+    // Connecter à MongoDB
+    await connectDB();
     
     const body = await request.json();
     const { formDefinition, userId } = body;
@@ -58,6 +63,24 @@ export async function POST(request: NextRequest) {
     const result = await createTypeform(formDefinition, accessToken);
 
     console.log('✅ Typeform créé avec succès:', result.formId);
+
+    // Sauvegarder dans MongoDB
+    const form = await Form.create({
+      formId: result.formId, // ID du formulaire Typeform
+      userId: userId,
+      title: formDefinition.title,
+      description: formDefinition.description,
+      definition: formDefinition,
+      createdBy: userId,
+      shareableLink: result.formUrl,
+      shortLink: result.formUrl,
+      tool: 'typeform',
+      platform: 'typeform',
+      isActive: true,
+      submissionCount: 0,
+    });
+
+    console.log('✅ Form saved to MongoDB:', form._id);
 
     return NextResponse.json({
       success: true,

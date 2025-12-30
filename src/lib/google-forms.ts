@@ -25,11 +25,11 @@ export async function createGoogleForm(
   formDefinition: FormDefinition,
   accessToken: string
 ): Promise<{ formId: string; responderUri: string; editUrl: string }> {
-  
+
   console.log('🎨 Création Google Form - Début');
   console.log('📝 Titre:', formDefinition.title);
   console.log('📋 Nombre de champs:', formDefinition.fields.length);
-  
+
   // 1. Créer le formulaire vide
   console.log('📡 Appel API Google Forms - CREATE...');
   const createResponse = await fetch('https://forms.googleapis.com/v1/forms', {
@@ -57,10 +57,10 @@ export async function createGoogleForm(
   const formData = await createResponse.json();
   const formId = formData.formId;
   const responderUri = formData.responderUri;
-  
+
   console.log('✅ Formulaire créé! ID:', formId);
   console.log('🔗 Lien répondant:', responderUri);
-  
+
   // 2. Ajouter la description si présente
   if (formDefinition.description) {
     console.log('📝 Ajout de la description...');
@@ -117,7 +117,7 @@ async function addFieldsToForm(
   fields: FormField[],
   accessToken: string
 ): Promise<void> {
-  
+
   const requests = fields.map((field, index) => {
     return {
       createItem: {
@@ -142,7 +142,8 @@ async function addFieldsToForm(
 /**
  * Convertir un FormField en Item Google Forms
  */
-function convertFieldToGoogleItem(field: FormField): any {
+function convertFieldToGoogleItem(field: FormField): Record<string, unknown> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const baseItem: any = {
     title: field.label,
     description: field.placeholder || '',
@@ -225,8 +226,9 @@ function convertFieldToGoogleItem(field: FormField): any {
 export async function getGoogleFormResponses(
   formId: string,
   accessToken: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any[]> {
-  
+
   const response = await fetch(
     `https://forms.googleapis.com/v1/forms/${formId}/responses`,
     {
@@ -250,7 +252,7 @@ export async function getGoogleFormResponses(
 export async function refreshGoogleAccessToken(
   refreshToken: string
 ): Promise<GoogleTokens> {
-  
+
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
@@ -274,7 +276,7 @@ export async function refreshGoogleAccessToken(
   }
 
   const data = await response.json();
-  
+
   return {
     access_token: data.access_token,
     refresh_token: refreshToken, // Le refresh token ne change pas
@@ -288,19 +290,20 @@ export async function refreshGoogleAccessToken(
  * Obtenir un access token valide (rafraîchit si expiré)
  */
 export async function getValidAccessToken(
-  userId: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _userId: string
 ): Promise<string> {
   // TODO: Récupérer les tokens depuis MongoDB
   // const tokens = await getUserGoogleTokens(userId);
-  
+
   // Vérifier si le token est expiré
   // if (isTokenExpired(tokens.expires_at)) {
   //   const newTokens = await refreshGoogleAccessToken(tokens.refresh_token);
   //   await saveUserGoogleTokens(userId, newTokens);
   //   return newTokens.access_token;
   // }
-  
+
   // return tokens.access_token;
-  
+
   throw new Error('Not implemented - MongoDB integration required');
 }

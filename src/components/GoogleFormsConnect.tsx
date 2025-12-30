@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 interface GoogleFormsConnectProps {
   userId: string;
   onConnected?: () => void;
+  onCancel?: () => void;
 }
 
-export function GoogleFormsConnect({ userId, onConnected }: GoogleFormsConnectProps) {
+export function GoogleFormsConnect({ userId, onConnected, onCancel }: GoogleFormsConnectProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
 
@@ -119,10 +120,15 @@ export function GoogleFormsConnect({ userId, onConnected }: GoogleFormsConnectPr
         )}
       </Button>
 
-      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-xs text-green-800">
-          ✅ Vos formulaires seront créés directement dans votre Google Drive
-        </p>
+      <div className="flex gap-2">
+        <Button
+          onClick={() => onCancel?.()}
+          variant="outline"
+          disabled={isConnecting}
+          className="w-full"
+        >
+          Annuler
+        </Button>
       </div>
     </div>
   );
@@ -133,6 +139,7 @@ interface GoogleFormsConnectionCardProps {
   isConnected: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  onCancel?: () => void;
 }
 
 export function GoogleFormsConnectionCard({
@@ -140,65 +147,22 @@ export function GoogleFormsConnectionCard({
   isConnected,
   onConnect,
   onDisconnect,
+  onCancel,
 }: GoogleFormsConnectionCardProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState('');
+  const [isNowConnected, setIsNowConnected] = useState(isConnected);
 
-  const handleConnect = async () => {
-    setError('');
-    setIsConnecting(true);
-
-    try {
-      // Rediriger vers le flux OAuth Google
-      const response = await fetch('/api/auth/google/authorize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      const data = await response.json();
-
-      if (data.authUrl) {
-        // Ouvrir la fenêtre OAuth dans une popup
-        const width = 500;
-        const height = 600;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-
-        const popup = window.open(
-          data.authUrl,
-          'Google OAuth',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-
-        // Écouter la fermeture de la popup
-        const checkPopup = setInterval(() => {
-          if (!popup || popup.closed) {
-            clearInterval(checkPopup);
-            // Vérifier si la connexion a réussi
-            checkConnection();
-          }
-        }, 500);
-      }
-    } catch (err) {
-      console.error('Error connecting Google:', err);
-      setError('Erreur lors de la connexion. Veuillez réessayer.');
-    } finally {
-      setIsConnecting(false);
+  const handleLocalConnect = () => {
+    setIsNowConnected(true);
+    if (onConnect) {
+      onConnect();
     }
   };
-
-  const checkConnection = async () => {
-    try {
-      const response = await fetch(`/api/auth/google/status?userId=${userId}`);
-      const data = await response.json();
-      
-      if (data.isConnected) {
-        onConnect?.();
-      }
-    } catch (error) {
-      console.error('Error checking connection:', error);
+  
+  const handleLocalDisconnect = () => {
+    setIsNowConnected(false);
+    if (onDisconnect) {
+      onDisconnect();
     }
   };
 
@@ -216,7 +180,7 @@ export function GoogleFormsConnectionCard({
       });
 
       if (response.ok) {
-        onDisconnect?.();
+        handleLocalDisconnect();
       } else {
         alert('Erreur lors de la déconnexion');
       }
@@ -231,13 +195,17 @@ export function GoogleFormsConnectionCard({
   return (
     <Card className="w-full max-w-lg border-gray-200 shadow-sm rounded-xl">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold">Connexion à Google Forms</CardTitle>
-        <CardDescription className="text-sm text-gray-600">
-          Cliquez sur le bouton ci-dessous pour vous connecter à Google Forms et commencer à créer votre formulaire.
+        <CardTitle className="flex items-center gap-2">
+          {isNowConnected ? '✅' : '🔗'} Compte Google Forms
+        </CardTitle>
+        <CardDescription>
+          {isNowConnected
+            ? 'Votre compte Google est connecté. Les formulaires seront créés dans votre Google Drive.'
+            : 'Connectez votre compte Google pour créer des formulaires dans votre espace.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isConnected ? (
+        {isNowConnected ? (
           <div className="space-y-3">
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
@@ -254,29 +222,7 @@ export function GoogleFormsConnectionCard({
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-            )}
-            
-            <Button
-              onClick={handleConnect}
-              disabled={isConnecting}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-              size="lg"
-            >
-              {isConnecting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Connexion en cours...
-                </>
-              ) : (
-                'Se connecter à Google Forms'
-              )}
-            </Button>
-          </div>
+          <GoogleFormsConnect userId={userId} onConnected={handleLocalConnect} onCancel={onCancel} />
         )}
       </CardContent>
     </Card>

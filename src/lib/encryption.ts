@@ -4,7 +4,6 @@ import crypto from 'crypto';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const AUTH_TAG_LENGTH = 16;
 
 if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
   throw new Error('ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
@@ -19,21 +18,21 @@ export function encrypt(text: string): string {
   try {
     // Générer un IV aléatoire
     const iv = crypto.randomBytes(IV_LENGTH);
-    
+
     // Créer le cipher
     const cipher = crypto.createCipheriv(
       ALGORITHM,
       Buffer.from(ENCRYPTION_KEY, 'hex'),
       iv
     );
-    
+
     // Chiffrer
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
+
     // Récupérer l'auth tag pour GCM
     const authTag = cipher.getAuthTag();
-    
+
     // Retourner: iv:authTag:encryptedData
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
   } catch (error) {
@@ -54,27 +53,27 @@ export function decrypt(encryptedText: string): string {
     if (parts.length !== 3) {
       throw new Error('Invalid encrypted text format');
     }
-    
+
     const [ivHex, authTagHex, encryptedData] = parts;
-    
+
     // Convertir de hex vers Buffer
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
-    
+
     // Créer le decipher
     const decipher = crypto.createDecipheriv(
       ALGORITHM,
       Buffer.from(ENCRYPTION_KEY, 'hex'),
       iv
     );
-    
+
     // Définir l'auth tag
     decipher.setAuthTag(authTag);
-    
+
     // Déchiffrer
     let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
   } catch (error) {
     console.error('Decryption error:', error);

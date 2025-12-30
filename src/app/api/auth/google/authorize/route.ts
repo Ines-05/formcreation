@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Configuration OAuth Google
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/google/callback`;
-    
+
     if (!clientId) {
       return NextResponse.json(
         { error: 'Google OAuth not configured' },
@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
 
     // Scopes nécessaires pour Google Forms
     const scopes = [
-      'https://www.googleapis.com/auth/forms',
+      'https://www.googleapis.com/auth/forms.body',
+      'https://www.googleapis.com/auth/forms.responses.readonly',
       'https://www.googleapis.com/auth/drive.file',
       'https://www.googleapis.com/auth/userinfo.email',
     ];
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error initiating Google OAuth:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to initiate Google OAuth',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

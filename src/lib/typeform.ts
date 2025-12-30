@@ -27,7 +27,7 @@ export async function createTypeform(
   formDefinition: FormDefinition,
   accessToken: string
 ): Promise<{ formId: string; formUrl: string; editUrl: string }> {
-  
+
   // Construire le payload Typeform
   const typeformPayload = {
     title: formDefinition.title,
@@ -68,8 +68,8 @@ export async function createTypeform(
 /**
  * Convertir un FormField en champ Typeform
  */
-function convertFieldToTypeformField(field: FormField): any {
-  const baseField: any = {
+function convertFieldToTypeformField(field: FormField): Record<string, unknown> {
+  const baseField = {
     title: field.label,
     properties: {
       description: field.placeholder || '',
@@ -148,8 +148,9 @@ function convertFieldToTypeformField(field: FormField): any {
 export async function getTypeformResponses(
   formId: string,
   accessToken: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any[]> {
-  
+
   const response = await fetch(
     `https://api.typeform.com/forms/${formId}/responses`,
     {
@@ -174,7 +175,7 @@ export async function getTypeformResponses(
 export async function refreshTypeformAccessToken(
   refreshToken: string
 ): Promise<TypeformTokens> {
-  
+
   const clientId = process.env.TYPEFORM_CLIENT_ID;
   const clientSecret = process.env.TYPEFORM_CLIENT_SECRET;
 
@@ -198,7 +199,7 @@ export async function refreshTypeformAccessToken(
   }
 
   const data = await response.json();
-  
+
   return {
     access_token: data.access_token,
     refresh_token: data.refresh_token || refreshToken,
@@ -212,19 +213,20 @@ export async function refreshTypeformAccessToken(
  * Obtenir un access token valide (rafraîchit si expiré et si refresh token disponible)
  */
 export async function getValidTypeformAccessToken(
-  userId: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _userId: string
 ): Promise<string> {
   // TODO: Récupérer les tokens depuis MongoDB
   // const tokens = await getUserTypeformTokens(userId);
-  
+
   // Vérifier si le token est expiré
   // if (tokens.expires_at && isTokenExpired(tokens.expires_at) && tokens.refresh_token) {
   //   const newTokens = await refreshTypeformAccessToken(tokens.refresh_token);
   //   await saveUserTypeformTokens(userId, newTokens);
   //   return newTokens.access_token;
   // }
-  
+
   // return tokens.access_token;
-  
+
   throw new Error('Not implemented - MongoDB integration required');
 }

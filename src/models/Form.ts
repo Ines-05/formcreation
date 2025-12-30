@@ -3,6 +3,7 @@ import { FormDefinition } from '@/lib/types';
 
 export interface IForm extends Document {
   formId: string;
+  userId: string; // ID de l'utilisateur qui a créé le formulaire
   title: string;
   description?: string;
   definition: FormDefinition;
@@ -12,12 +13,18 @@ export interface IForm extends Document {
   submissionCount: number;
   shareableLink?: string;
   shortLink?: string;
+  tool?: string; // tally, google, typeform
+  platform?: string; // external platform info
 }
 
 const FormSchema = new Schema<IForm>({
   formId: { 
     type: String, 
-    unique: true, 
+    required: true,
+    index: true 
+  },
+  userId: { 
+    type: String, 
     required: true,
     index: true 
   },
@@ -33,6 +40,11 @@ const FormSchema = new Schema<IForm>({
   submissionCount: { type: Number, default: 0 },
   shareableLink: String,
   shortLink: String,
+  tool: { type: String, enum: ['tally', 'google', 'typeform', 'internal'] },
+  platform: String,
 });
+
+// Index composé pour éviter les doublons utilisateur/formulaire
+FormSchema.index({ userId: 1, formId: 1 }, { unique: true });
 
 export const Form = mongoose.models.Form || mongoose.model<IForm>('Form', FormSchema);

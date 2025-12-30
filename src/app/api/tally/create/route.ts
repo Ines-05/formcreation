@@ -36,15 +36,18 @@ export async function POST(request: NextRequest) {
     // Utiliser directement le lien Tally (pas besoin de Bitly)
     const shortLink = tallyShareUrl;
 
-    // Sauvegarder dans MongoDB
+    // Sauvegarder dans MongoDB avec les nouveaux champs
     const form = await Form.create({
       formId: tallyForm.id, // On utilise l'ID Tally comme formId
+      userId: userId || 'anonymous', // ID de l'utilisateur
       title: formDefinition.title,
       description: formDefinition.description,
       definition: formDefinition,
-      createdBy: 'anonymous',
+      createdBy: userId || 'anonymous',
       shareableLink: tallyShareUrl,
       shortLink,
+      tool: 'tally', // Outil utilisé
+      platform: 'tally', // Plateforme externe
       isActive: true,
       submissionCount: 0,
     });
