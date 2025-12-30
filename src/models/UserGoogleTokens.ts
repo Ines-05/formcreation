@@ -57,7 +57,6 @@ const UserGoogleTokensSchema = new Schema<IUserGoogleTokens>(
 /**
  * Index pour optimiser les requêtes
  */
-UserGoogleTokensSchema.index({ userId: 1 });
 UserGoogleTokensSchema.index({ expiresAt: 1 });
 
 /**

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveGoogleTokens } from '@/lib/google-tokens';
 
+// Force dynamic rendering to avoid build-time database connections
+export const dynamic = 'force-dynamic';
+
 /**
  * Endpoint pour gérer le callback OAuth Google
  * 

@@ -51,7 +51,6 @@ const UserTypeformTokensSchema = new Schema<IUserTypeformTokens>(
 /**
  * Index pour optimiser les requêtes
  */
-UserTypeformTokensSchema.index({ userId: 1 });
 UserTypeformTokensSchema.index({ expiresAt: 1 });
 
 /**

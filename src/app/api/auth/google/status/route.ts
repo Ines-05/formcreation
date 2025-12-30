@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasValidGoogleTokens } from '@/lib/google-tokens';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Endpoint pour vérifier si un utilisateur a connecté son compte Google
  * 
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error checking Google auth status:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to check Google auth status',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
