@@ -220,7 +220,7 @@ export default function Dashboard() {
             ] as const).map((chip) => (
               <button
                 key={chip.k}
-                onClick={() => setFilter(chip.k as any)}
+                onClick={() => setFilter(chip.k as 'all' | 'google' | 'tally' | 'typeform')}
                 className={`
                     flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap
                     ${filter === chip.k

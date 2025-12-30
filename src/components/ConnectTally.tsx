@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+
 
 interface TallyConnectionCardProps {
   userId: string;
@@ -107,7 +107,7 @@ export function TallyConnectionCard({
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold">Connexion à Tally</CardTitle>
         <CardDescription className="text-sm text-gray-600">
-          {isNowConnected 
+          {isNowConnected
             ? 'Votre compte Tally est connecté.'
             : 'Pour obtenir votre clé API Tally, suivez ces étapes :'}
         </CardDescription>
@@ -140,7 +140,7 @@ export function TallyConnectionCard({
                 <li>Copiez la clé générée et revenez ici pour la coller</li>
               </ol>
             </div>
-            
+
             <div className="flex gap-2">
               <Button
                 onClick={() => setShowInput(true)}
@@ -176,7 +176,7 @@ export function TallyConnectionCard({
                 autoFocus
               />
               {error && (
-                <motion.p 
+                <motion.p
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="text-sm text-red-600 mt-2"

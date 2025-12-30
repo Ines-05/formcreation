@@ -34,18 +34,18 @@ export default function Home() {
   const [isTypeformConnected, setIsTypeformConnected] = useState(false);
   const [selectedTool, setSelectedTool] = useState<FormTool | null>(null);
   const [userId] = useState('user-demo-123');
-  
+
   // States pour la preview
   const [currentFormDefinition, setCurrentFormDefinition] = useState<FormDefinition | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewLink, setPreviewLink] = useState<string | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [isMultiline, setIsMultiline] = useState(false);
 
   const formatInline = (inputText: string) => {
-    const parts: any[] = [];
+    const parts: React.ReactNode[] = [];
     const regex = /(\*\*[^*]+\*\*)|(\*[^*]+\*)|(`[^`]+`)/g;
     let match: RegExpExecArray | null;
     let lastIndex = 0;
@@ -71,7 +71,7 @@ export default function Home() {
 
   const renderMarkdown = (text: string) => {
     const lines = text.split(/\r?\n/);
-    const elements: any[] = [];
+    const elements: React.ReactNode[] = [];
     let listItems: string[] = [];
 
     const flushList = () => {
@@ -172,10 +172,10 @@ export default function Home() {
 
     setMessages([userMessage]);
     setIsLoading(true);
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -184,7 +184,7 @@ export default function Home() {
         requiresToolSelection: true,
       };
       setMessages(prev => [...prev, assistantMessage]);
-      
+
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -195,7 +195,7 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -206,10 +206,10 @@ export default function Home() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    
+
     try {
       const lowerContent = userMessage.content.toLowerCase();
-      const wantsToCreateForm = 
+      const wantsToCreateForm =
         lowerContent.includes('formulaire') ||
         lowerContent.includes('form') ||
         lowerContent.includes('créer') ||
@@ -248,9 +248,9 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
-          conversationHistory: messages.slice(-10).map(msg => ({ 
-            role: msg.role, 
-            content: msg.content 
+          conversationHistory: messages.slice(-10).map(msg => ({
+            role: msg.role,
+            content: msg.content
           }))
         }),
       });
@@ -311,7 +311,7 @@ export default function Home() {
         setShowPreview(true);
         setPreviewLink(googleData.responderUri);
         setCurrentFormDefinition(formDefinition);
-        
+
         const previewMsg: ChatMessage = {
           id: Date.now().toString(),
           role: 'assistant',
@@ -365,7 +365,7 @@ export default function Home() {
         setShowPreview(true);
         setPreviewLink(typeformData.formUrl);
         setCurrentFormDefinition(formDefinition);
-        
+
         const previewMsg: ChatMessage = {
           id: Date.now().toString(),
           role: 'assistant',
@@ -389,18 +389,18 @@ export default function Home() {
 
   const handleToolSelection = (tool: FormTool) => {
     setSelectedTool(tool);
-    
+
     const toolNames: Record<NonNullable<FormTool>, string> = {
       'tally': 'Tally',
       'google-forms': 'Google Forms',
       'typeform': 'Typeform',
       'internal': 'le formulaire hébergé sur cette app',
     };
-    
+
     const toolName = toolNames[tool];
-    
+
     setMessages(prev => prev.filter(m => !m.requiresToolSelection));
-    
+
     const confirmationMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'assistant',
@@ -408,7 +408,7 @@ export default function Home() {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, confirmationMsg]);
-    
+
     if (isToolConnected(tool)) {
       const readyMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -431,7 +431,7 @@ export default function Home() {
 
   const handleFinalizeForm = () => {
     setShowPreview(false);
-    
+
     const finalMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'assistant',
@@ -439,7 +439,7 @@ export default function Home() {
       timestamp: new Date(),
       shareableLink: previewLink || undefined,
     };
-    
+
     setMessages(prev => [...prev, finalMsg]);
     setCurrentFormDefinition(null);
     setPreviewLink(null);
@@ -452,9 +452,9 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-white flex flex-col">
-      
+
       {/* Header moderne */}
-      <motion.div 
+      <motion.div
         className="bg-white/80 backdrop-blur-sm shadow-sm border-b p-4 flex-shrink-0"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -483,7 +483,7 @@ export default function Home() {
         <div className="h-full flex">
           {/* Preview à gauche (si active) */}
           {showPreview && previewLink && (
-            <motion.div 
+            <motion.div
               className="w-1/2 border-r bg-white flex flex-col"
               initial={{ x: -100, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
@@ -520,40 +520,38 @@ export default function Home() {
           <div className={`flex flex-col ${showPreview ? 'w-1/2' : 'w-full'}`}>
             <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl mx-auto w-full">
               {messages.map((message, index) => (
-                <motion.div 
-                  key={message.id} 
+                <motion.div
+                  key={message.id}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
                   <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
-                    
+
                     {/* Avatar + Message */}
                     <div className={`flex items-start gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <motion.div 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          message.role === 'user' 
-                            ? 'bg-purple-600 text-white' 
+                      <motion.div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${message.role === 'user'
+                            ? 'bg-purple-600 text-white'
                             : 'bg-gray-200 text-gray-600'
-                        }`}
+                          }`}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                       >
                         {message.role === 'user' ? '👤' : '🤖'}
                       </motion.div>
-                      
+
                       <div className="flex-1">
-                        <motion.div 
-                          className={`rounded-lg p-4 ${
-                            message.role === 'user' 
-                              ? 'bg-purple-600 text-white' 
+                        <motion.div
+                          className={`rounded-lg p-4 ${message.role === 'user'
+                              ? 'bg-purple-600 text-white'
                               : 'bg-white border shadow-sm'
-                          }`}
+                            }`}
                           whileHover={{ scale: 1.02 }}
                         >
                           <div className="whitespace-pre-wrap">{renderMarkdown(message.content)}</div>
-                          
+
                           {/* Sélecteur d'outil */}
                           {message.requiresToolSelection && (
                             <div className="mt-4">
@@ -646,11 +644,10 @@ export default function Home() {
                             </div>
                           )}
                         </motion.div>
-                        
+
                         {/* Timestamp */}
-                        <div className={`text-xs mt-1 ${
-                          message.role === 'user' ? 'text-right text-gray-500' : 'text-left text-gray-500'
-                        }`}>
+                        <div className={`text-xs mt-1 ${message.role === 'user' ? 'text-right text-gray-500' : 'text-left text-gray-500'
+                          }`}>
                           {isMounted && message.timestamp.toLocaleTimeString()}
                         </div>
                       </div>
@@ -658,9 +655,9 @@ export default function Home() {
                   </div>
                 </motion.div>
               ))}
-              
+
               {isLoading && (
-                <motion.div 
+                <motion.div
                   className="flex justify-start"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -672,12 +669,12 @@ export default function Home() {
                   </div>
                 </motion.div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input zone */}
-            <motion.div 
+            <motion.div
               className="border-t bg-white p-4"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}

@@ -5,9 +5,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Checkbox } from './ui/checkbox';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
-import { Copy, ExternalLink, Loader2, Trash2, X, Globe, Lock, Smartphone, Monitor } from 'lucide-react';
+import { Copy, ExternalLink, Loader2, Trash2, X, Lock, Smartphone, Monitor } from 'lucide-react';
 import { useState } from 'react';
 import { FormField } from '@/lib/types';
 
@@ -303,7 +302,7 @@ export function FormPreviewModern({
                       >
                         <div className="flex items-center gap-2 text-primary font-medium bg-primary/10 px-4 py-2 rounded-full">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-sm">L'IA rédige vos questions...</span>
+                          <span className="text-sm">L&apos;IA rédige vos questions...</span>
                         </div>
                       </motion.div>
                     )}

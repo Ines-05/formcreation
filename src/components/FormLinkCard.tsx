@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, ExternalLink, Copy, PartyPopper } from 'lucide-react';
+import { ExternalLink, Copy, PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
 import { useState } from 'react';
@@ -44,7 +44,7 @@ export function FormLinkCard({ link, tool = 'tally' }: FormLinkCardProps) {
             <PartyPopper className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-2xl mb-1">C'est prêt ! 🎉</h3>
+            <h3 className="font-bold text-2xl mb-1">C&apos;est prêt ! 🎉</h3>
             <p className="text-emerald-100 text-sm">Votre formulaire {getToolName()} est en ligne.</p>
           </div>
         </div>

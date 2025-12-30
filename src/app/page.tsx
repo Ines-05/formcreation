@@ -3,19 +3,18 @@
 import { useState, useRef, useEffect } from 'react';
 import type React from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Sparkles, LayoutDashboard, Eye, EyeOff, X } from 'lucide-react';
+import { Send, Sparkles, LayoutDashboard } from 'lucide-react';
 import { FormDefinition } from '@/lib/types';
 import { ToolSelector, FormTool } from '@/components/ToolSelector';
 import { GoogleFormsConnectionCard } from '@/components/GoogleFormsConnect';
 import { TypeformConnectionCard } from '@/components/TypeformConnect';
 import { TallyConnectionCard } from '@/components/ConnectTally';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
-import { ConnectedStatus } from '@/components/ConnectedStatus';
 import { FormPreviewModern } from '@/components/FormPreviewModern';
 import { FormPreviewCard } from '@/components/FormPreviewCard';
 import { FormLinkCard } from '@/components/FormLinkCard';
 import { ResizablePanels } from '@/components/ResizablePanels';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 
 interface ChatMessage {
   id: string;
@@ -34,7 +33,9 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [isMounted, setIsMounted] = useState(false);
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [isTallyConnected, setIsTallyConnected] = useState(false);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [isTypeformConnected, setIsTypeformConnected] = useState(false);
@@ -51,7 +52,7 @@ export default function Home() {
   const [isMultiline, setIsMultiline] = useState(false);
 
   const formatInline = (inputText: string) => {
-    const parts: any[] = [];
+    const parts: React.ReactNode[] = [];
     const regex = /(\*\*[^*]+\*\*)|(\*[^*]+\*)|(`[^`]+`)/g;
     let match: RegExpExecArray | null;
     let lastIndex = 0;
@@ -77,7 +78,7 @@ export default function Home() {
 
   const renderMarkdown = (text: string) => {
     const lines = text.split(/\r?\n/);
-    const elements: any[] = [];
+    const elements: React.ReactNode[] = [];
     let listItems: string[] = [];
 
     const flushList = () => {
@@ -130,17 +131,6 @@ export default function Home() {
     setIsMultiline(el.scrollHeight > 56 || el.value.includes('\n'));
   };
 
-  useEffect(() => {
-    setIsMounted(true);
-    checkTallyConnection();
-    checkGoogleConnection();
-    checkTypeformConnection();
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const checkTallyConnection = async () => {
     try {
       const response = await fetch(`/api/user/tally/status?userId=${userId}`);
@@ -170,6 +160,17 @@ export default function Home() {
       console.error('Error checking Typeform connection:', error);
     }
   };
+
+  useEffect(() => {
+    setIsMounted(true);
+    checkTallyConnection();
+    checkGoogleConnection();
+    checkTypeformConnection();
+  }, [checkGoogleConnection, checkTallyConnection, checkTypeformConnection]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Fonctions helper pour détection d'outil
   const getToolDisplayName = (tool: string): string => {
@@ -566,90 +567,8 @@ export default function Home() {
     }
   };
 
-  const createGoogleForm = async (formDefinition: FormDefinition, messageId: string) => {
-    try {
-      const googleResponse = await fetch('/api/google-forms/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          formDefinition,
-          userId: userId,
-        }),
-      });
 
-      const googleData = await googleResponse.json();
 
-      if (googleData.success) {
-        setShowPreview(true);
-        setPreviewLink(googleData.responderUri);
-        setCurrentFormDefinition(formDefinition);
-
-        const previewMsg: ChatMessage = {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: `✨ Super ! Ton formulaire est créé. Tu peux le voir dans la prévisualisation.\n\nSi tu veux modifier quelque chose, dis-le moi !`,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, previewMsg]);
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la création Google Forms:', error);
-    }
-  };
-
-  const createTallyForm = async (formDefinition: FormDefinition, messageId: string) => {
-    try {
-      const tallyResponse = await fetch('/api/tally/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          formDefinition,
-          userId: userId,
-        }),
-      });
-
-      const tallyData = await tallyResponse.json();
-
-      if (tallyData.success) {
-        setShowPreview(true);
-        setPreviewLink(tallyData.shareableLink);
-        setCurrentFormDefinition(formDefinition);
-      }
-    } catch (error) {
-      console.error('Erreur lors de la création Tally:', error);
-    }
-  };
-
-  const createTypeformForm = async (formDefinition: FormDefinition) => {
-    try {
-      const typeformResponse = await fetch('/api/typeform/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          formDefinition,
-          userId: userId,
-        }),
-      });
-
-      const typeformData = await typeformResponse.json();
-
-      if (typeformData.success) {
-        setShowPreview(true);
-        setPreviewLink(typeformData.formUrl);
-        setCurrentFormDefinition(formDefinition);
-
-        const previewMsg: ChatMessage = {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: `✨ Super ! Ton formulaire Typeform est créé. Tu peux le voir dans la prévisualisation.`,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, previewMsg]);
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la création Typeform:', error);
-    }
-  };
 
   const isToolConnected = (tool: FormTool): boolean => {
     if (tool === 'tally') return isTallyConnected;
@@ -1078,7 +997,7 @@ export default function Home() {
                   onUpdateField={(id, updates) => {
                     setCurrentFormDefinition(prev => {
                       if (!prev) return null;
-                      // @ts-ignore
+
                       const newFields = prev.fields.map(f => f.id === id ? { ...f, ...updates } : f);
                       return { ...prev, fields: newFields };
                     });

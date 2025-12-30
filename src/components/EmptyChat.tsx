@@ -32,7 +32,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
     <div className="relative h-full w-full flex items-center justify-center overflow-hidden bg-[#0a0e1a]">
       {/* Arrière-plan planète */}
       <PlanetBackground />
-      
+
       {/* Contenu principal */}
       <div className="relative z-10 w-full max-w-[800px] px-6">
         {/* Badge animé */}
@@ -42,15 +42,15 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <motion.div 
+          <motion.div
             className="bg-primary/10 backdrop-blur-sm border border-primary/30 rounded-full px-4 py-2 flex items-center gap-2.5"
-            whileHover={{ 
+            whileHover={{
               scale: 1.05,
               boxShadow: "0 0 30px rgba(29, 161, 242, 0.3)",
             }}
           >
             <motion.div
-              animate={{ 
+              animate={{
                 rotate: [0, 10, -10, 0],
               }}
               transition={{
@@ -95,7 +95,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
             >
               créer
             </motion.span>
-            <span> aujourd'hui ?</span>
+            <span> aujourd&apos;hui ?</span>
           </h1>
         </motion.div>
 
@@ -117,11 +117,11 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
           transition={{ duration: 0.8, delay: 0.5 }}
         >
           {/* Lueur autour de la zone de saisie */}
-          <motion.div 
+          <motion.div
             className="absolute -inset-[2px] rounded-[20px] bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"
             whileHover={{ opacity: 1 }}
           />
-          
+
           <div className="relative bg-[#1a1f2e] rounded-[18px] border border-[#2a3441] shadow-2xl overflow-hidden group">
             {/* Barre supérieure comme un IDE */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[#2a3441]">
@@ -153,7 +153,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
             {/* Zone de saisie principale */}
             <div className="flex items-start gap-3 p-4">
               <motion.div
-                whileHover={{ 
+                whileHover={{
                   rotate: 180,
                   scale: 1.1,
                 }}
@@ -168,7 +168,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
                   <Plus className="h-5 w-5" />
                 </Button>
               </motion.div>
-              
+
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -177,7 +177,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
                 className="flex-1 border-0 shadow-none resize-none min-h-[60px] max-h-[200px] focus-visible:ring-0 text-[15px] bg-transparent text-white placeholder:text-[#657786]"
                 rows={2}
               />
-              
+
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -211,7 +211,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.7 + index * 0.1 }}
-                whileHover={{ 
+                whileHover={{
                   scale: 1.05,
                   borderColor: 'rgba(29, 161, 242, 0.5)',
                   boxShadow: "0 0 20px rgba(29, 161, 242, 0.2)",

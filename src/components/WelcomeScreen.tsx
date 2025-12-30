@@ -1,8 +1,7 @@
 'use client';
 
-import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
-import { ArrowRight, Plus, Sparkles, LayoutDashboard, Command } from 'lucide-react';
+import { ArrowRight, Sparkles, LayoutDashboard, Command } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'motion/react';
 
@@ -76,7 +75,7 @@ export function WelcomeScreen({ onSubmit }: WelcomeScreenProps) {
           </h1>
 
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Dites simplement ce dont vous avez besoin. L'IA génère la structure, les questions et le design pour Typeform, Google Forms ou Tally.
+            Dites simplement ce dont vous avez besoin. L&apos;IA génère la structure, les questions et le design pour Typeform, Google Forms ou Tally.
           </p>
         </div>
 
