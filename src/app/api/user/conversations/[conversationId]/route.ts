@@ -4,8 +4,8 @@ import { Conversation } from '@/models/Conversation';
 import { auth } from '@clerk/nextjs/server';
 
 export async function GET(
-    req: Request,
-    { params }: { params: { conversationId: string } }
+    _req: Request,
+    { params }: { params: Promise<{ conversationId: string }> }
 ) {
     try {
         const { userId } = await auth();

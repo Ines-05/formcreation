@@ -25,7 +25,7 @@ export function Header() {
                     </SignInButton>
                     <SignUpButton mode="modal">
                         <button className="whitespace-nowrap bg-primary text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 active:scale-95 rounded-full font-medium text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-5 transition-all">
-                            S'inscrire
+                            S&apos;inscrire
                         </button>
                     </SignUpButton>
                 </SignedOut>

@@ -1,10 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { FormDefinition } from '../lib/types';
 
 export interface IMessage {
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
-    formDefinition?: any; // Optionnel, si un formulaire a été généré
+    formDefinition?: FormDefinition; // Optionnel, si un formulaire a été généré
 }
 
 export interface IConversation extends Document {

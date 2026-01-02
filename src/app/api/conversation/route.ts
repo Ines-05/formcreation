@@ -1,4 +1,4 @@
-import { generateText, generateObject, streamText } from 'ai';
+import { generateText, generateObject } from 'ai';
 import { formModel } from '@/lib/ai';
 import { z } from 'zod';
 import { auth } from '@clerk/nextjs/server';

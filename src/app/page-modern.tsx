@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import type React from 'react';
 import { Button } from '@/components/ui/button';
 import { Send, Sparkles, User } from 'lucide-react';
 import { FormDefinition } from '@/lib/types';
@@ -28,7 +29,10 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [isMounted, setIsMounted] = useState(false);
+  const [currentFormDefinition, setCurrentFormDefinition] = useState<FormDefinition | null>(null);
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [isTallyConnected, setIsTallyConnected] = useState(false);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [isTypeformConnected, setIsTypeformConnected] = useState(false);
@@ -36,7 +40,6 @@ export default function Home() {
   const [userId] = useState('user-demo-123');
 
   // States pour la preview
-  const [currentFormDefinition, setCurrentFormDefinition] = useState<FormDefinition | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewLink, setPreviewLink] = useState<string | null>(null);
 
@@ -121,18 +124,7 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    setIsMounted(true);
-    checkTallyConnection();
-    checkGoogleConnection();
-    checkTypeformConnection();
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const checkTallyConnection = async () => {
+  const checkTallyConnection = useRef(async () => {
     try {
       const response = await fetch(`/api/user/tally/status?userId=${userId}`);
       const data = await response.json();
@@ -140,9 +132,9 @@ export default function Home() {
     } catch (error) {
       console.error('Error checking Tally connection:', error);
     }
-  };
+  }).current;
 
-  const checkGoogleConnection = async () => {
+  const checkGoogleConnection = useRef(async () => {
     try {
       const response = await fetch(`/api/auth/google/status?userId=${userId}`);
       const data = await response.json();
@@ -150,9 +142,9 @@ export default function Home() {
     } catch (error) {
       console.error('Error checking Google connection:', error);
     }
-  };
+  }).current;
 
-  const checkTypeformConnection = async () => {
+  const checkTypeformConnection = useRef(async () => {
     try {
       const response = await fetch(`/api/auth/typeform/status?userId=${userId}`);
       const data = await response.json();
@@ -160,7 +152,18 @@ export default function Home() {
     } catch (error) {
       console.error('Error checking Typeform connection:', error);
     }
-  };
+  }).current;
+
+  useEffect(() => {
+    setIsMounted(true);
+    checkTallyConnection();
+    checkGoogleConnection();
+    checkTypeformConnection();
+  }, [checkTallyConnection, checkGoogleConnection, checkTypeformConnection]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleInitialSubmit = async (text: string) => {
     const userMessage: ChatMessage = {
@@ -275,9 +278,9 @@ export default function Home() {
 
         if (data.formDefinition) {
           if (selectedTool === 'google-forms' && isGoogleConnected) {
-            await createGoogleForm(data.formDefinition, assistantMessage.id);
+            await createGoogleForm(data.formDefinition);
           } else if (selectedTool === 'tally' && isTallyConnected) {
-            await createTallyForm(data.formDefinition, assistantMessage.id);
+            await createTallyForm(data.formDefinition);
           } else if (selectedTool === 'typeform' && isTypeformConnected) {
             await createTypeformForm(data.formDefinition);
           }
@@ -298,7 +301,7 @@ export default function Home() {
     }
   };
 
-  const createGoogleForm = async (formDefinition: FormDefinition, messageId: string) => {
+  const createGoogleForm = async (formDefinition: FormDefinition) => {
     try {
       const googleResponse = await fetch('/api/google-forms/create', {
         method: 'POST',
@@ -329,7 +332,7 @@ export default function Home() {
     }
   };
 
-  const createTallyForm = async (formDefinition: FormDefinition, messageId: string) => {
+  const createTallyForm = async (formDefinition: FormDefinition) => {
     try {
       const tallyResponse = await fetch('/api/tally/create', {
         method: 'POST',
@@ -535,7 +538,7 @@ export default function Home() {
           {/* Chat à droite (ou centré si seul) */}
           <div className={`flex flex-col transition-all duration-500 ease-in-out ${showPreview && previewLink ? 'w-1/2' : 'w-full max-w-3xl mx-auto'}`}>
             <div className="flex-1 overflow-y-auto px-2 space-y-6 scrollbar-hide py-4">
-              {messages.map((message, index) => (
+              {messages.map((message) => (
                 <motion.div
                   key={message.id}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}

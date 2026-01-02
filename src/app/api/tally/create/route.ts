@@ -32,12 +32,12 @@ export async function POST(request: NextRequest) {
     // Générer les URLs Tally
     const tallyShareUrl = getTallyShareUrl(tallyForm.id);
     const tallyEmbedUrl = getTallyEmbedUrl(tallyForm.id);
-    
+
     // Utiliser directement le lien Tally (pas besoin de Bitly)
     const shortLink = tallyShareUrl;
 
     // Sauvegarder dans MongoDB avec les nouveaux champs
-    const form = await Form.create({
+    await Form.create({
       formId: tallyForm.id, // On utilise l'ID Tally comme formId
       userId: userId || 'anonymous', // ID de l'utilisateur
       title: formDefinition.title,
@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error creating Tally form:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to create Tally form', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+      {
+        error: 'Failed to create Tally form',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );

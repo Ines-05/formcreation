@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const TALLY_API_KEY = process.env.TALLY_API_KEY;
 const TALLY_API_URL = 'https://api.tally.so';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     if (!TALLY_API_KEY) {
       return NextResponse.json(
@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error testing Tally API:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to test Tally API', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+      {
+        error: 'Failed to test Tally API',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );

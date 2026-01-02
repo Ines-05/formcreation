@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTypeform } from '@/lib/typeform';
 import { getTypeformTokens, refreshTypeformAccessToken } from '@/lib/typeform-tokens';
-import { FormDefinition } from '@/lib/types';
 import { connectDB } from '@/lib/mongodb';
 import { Form } from '@/models/Form';
 
@@ -14,10 +13,10 @@ import { Form } from '@/models/Form';
 export async function POST(request: NextRequest) {
   try {
     console.log('🎯 API Typeform - Début de la création');
-    
+
     // Connecter à MongoDB
     await connectDB();
-    
+
     const body = await request.json();
     const { formDefinition, userId } = body;
 
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest) {
       try {
         accessToken = await refreshTypeformAccessToken(userId);
         console.log('✅ Token rafraîchi');
-      } catch (refreshError) {
+      } catch {
         console.error('❌ Échec du rafraîchissement, utilisation du token actuel');
         // Continuer avec le token actuel, peut-être qu'il fonctionne encore
       }
@@ -92,7 +91,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Erreur lors de la création du Typeform:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to create Typeform',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

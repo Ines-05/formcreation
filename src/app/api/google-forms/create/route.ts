@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createGoogleForm } from '@/lib/google-forms';
 import { getGoogleTokens, refreshGoogleAccessToken } from '@/lib/google-tokens';
-import { FormDefinition } from '@/lib/types';
 import { connectDB } from '@/lib/mongodb';
 import { Form } from '@/models/Form';
 
@@ -14,10 +13,10 @@ import { Form } from '@/models/Form';
 export async function POST(request: NextRequest) {
   try {
     console.log('🎯 API Google Forms - Début de la création');
-    
+
     // Connecter à MongoDB
     await connectDB();
-    
+
     const body = await request.json();
     const { formDefinition, userId } = body;
 
@@ -60,7 +59,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ Google Form créé avec succès:', result.formId);
 
     // Sauvegarder dans MongoDB
-    const form = await Form.create({
+    await Form.create({
       formId: result.formId, // ID du formulaire Google
       userId: userId,
       title: formDefinition.title,
@@ -75,7 +74,7 @@ export async function POST(request: NextRequest) {
       submissionCount: 0,
     });
 
-    console.log('✅ Form saved to MongoDB:', form._id);
+    console.log('✅ Form saved to MongoDB');
 
     return NextResponse.json({
       success: true,
@@ -88,7 +87,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Erreur lors de la création du Google Form:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to create Google Form',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

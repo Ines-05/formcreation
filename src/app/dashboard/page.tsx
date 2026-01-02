@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, ExternalLink, Copy, EllipsisVertical, Calendar } from 'lucide-react';
@@ -97,13 +97,7 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    if (isLoaded && userId !== 'anonymous') {
-      fetchDashboardData();
-    }
-  }, [isLoaded, userId]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useRef(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/dashboard?userId=${userId}`);
@@ -135,7 +129,13 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }).current;
+
+  useEffect(() => {
+    if (isLoaded && userId !== 'anonymous') {
+      fetchDashboardData();
+    }
+  }, [isLoaded, userId, fetchDashboardData]);
 
   const filtered = useMemo(() => {
     return forms.filter(fm => {

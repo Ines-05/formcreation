@@ -43,13 +43,13 @@ export function AuthCard() {
                                 className="w-full h-11 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 transition-all gap-2 rounded-xl"
                             >
                                 <UserPlus className="w-4 h-4" />
-                                S'inscrire
+                                S&apos;inscrire
                             </Button>
                         </SignUpButton>
                     </div>
 
                     <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-semibold pt-4 border-t border-gray-100">
-                        C'est gratuit et prend moins d'une minute
+                        C&apos;est gratuit et prend moins d&apos;une minute
                     </p>
                 </CardContent>
             </Card>

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type React from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Sparkles, LayoutDashboard, User } from 'lucide-react';
+import { Send, User } from 'lucide-react';
 import { FormDefinition } from '@/lib/types';
 import { ToolSelector, FormTool } from '@/components/ToolSelector';
 import { GoogleFormsConnectionCard } from '@/components/GoogleFormsConnect';
@@ -14,7 +14,7 @@ import { FormPreviewModern } from '@/components/FormPreviewModern';
 import { FormPreviewCard } from '@/components/FormPreviewCard';
 import { FormLinkCard } from '@/components/FormLinkCard';
 import { ResizablePanels } from '@/components/ResizablePanels';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { SignedIn, useUser } from '@clerk/nextjs';
 import { v4 as uuidv4 } from 'uuid';
 import { Sidebar } from '@/components/Sidebar';
@@ -38,9 +38,7 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [isMounted, setIsMounted] = useState(false);
-  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [isTallyConnected, setIsTallyConnected] = useState(false);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [isTypeformConnected, setIsTypeformConnected] = useState(false);
@@ -148,7 +146,7 @@ export default function Home() {
     return null;
   };
 
-  const checkTallyConnection = async () => {
+  const checkTallyConnection = useRef(async () => {
     if (userId === 'anonymous') return;
     try {
       const response = await fetch(`/api/user/tally/status?userId=${userId}`);
@@ -157,9 +155,9 @@ export default function Home() {
     } catch (error) {
       console.error('Error checking Tally connection:', error);
     }
-  };
+  }).current;
 
-  const checkGoogleConnection = async () => {
+  const checkGoogleConnection = useRef(async () => {
     if (userId === 'anonymous') return;
     try {
       const response = await fetch(`/api/auth/google/status?userId=${userId}`);
@@ -168,9 +166,9 @@ export default function Home() {
     } catch (error) {
       console.error('Error checking Google connection:', error);
     }
-  };
+  }).current;
 
-  const checkTypeformConnection = async () => {
+  const checkTypeformConnection = useRef(async () => {
     if (userId === 'anonymous') return;
     try {
       const response = await fetch(`/api/auth/typeform/status?userId=${userId}`);
@@ -179,7 +177,7 @@ export default function Home() {
     } catch (error) {
       console.error('Error checking Typeform connection:', error);
     }
-  };
+  }).current;
 
   useEffect(() => {
     setIsMounted(true);
@@ -188,7 +186,7 @@ export default function Home() {
       checkGoogleConnection();
       checkTypeformConnection();
     }
-  }, [isLoaded, userId]);
+  }, [isLoaded, userId, checkTallyConnection, checkGoogleConnection, checkTypeformConnection]);
 
   // Gérer la connexion réussie pendant une conversation
   useEffect(() => {
@@ -215,19 +213,11 @@ export default function Home() {
     }
   }, [userId, isLoaded, messages, user?.firstName, conversationId]);
 
-  useEffect(() => {
-    scrollToBottom();
-    // Sauvegarder la conversation si elle a un ID et qu'on est connecté
-    if (messages.length > 0 && conversationId && userId !== 'anonymous') {
-      saveConversation();
-    }
-  }, [messages]);
-
-  const saveConversation = async () => {
+  const saveConversation = useRef(async () => {
     if (!conversationId || userId === 'anonymous') return;
 
     try {
-      const response = await fetch('/api/user/conversations', {
+      await fetch('/api/user/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -242,11 +232,18 @@ export default function Home() {
           }))
         })
       });
-      // On ne parse pas forcément le JSON ici si on n'en a pas besoin
     } catch (error) {
       console.error('Error saving conversation:', error);
     }
-  };
+  }).current;
+
+  useEffect(() => {
+    scrollToBottom();
+    // Sauvegarder la conversation si elle a un ID et qu'on est connecté
+    if (messages.length > 0 && conversationId && userId !== 'anonymous') {
+      saveConversation();
+    }
+  }, [messages, conversationId, userId, saveConversation]);
 
   const loadConversation = async (id: string) => {
     try {
@@ -255,7 +252,7 @@ export default function Home() {
       const data = await safeJSON(res);
       if (data && data.success) {
         setConversationId(id);
-        const savedMessages = data.conversation.messages.map((m: any) => ({
+        const savedMessages = data.conversation.messages.map((m: ChatMessage) => ({
           ...m,
           timestamp: new Date(m.timestamp)
         }));
@@ -645,7 +642,7 @@ export default function Home() {
         const tryParsePartialJson = (jsonString: string) => {
           try {
             // Tenter de trouver le dernier objet complet
-            let lastValidJson = jsonString.trim();
+            const lastValidJson = jsonString.trim();
             if (!lastValidJson.startsWith('{')) return null;
 
             // Si le JSON ne finit pas par }, on tente de fermer les accolades pour voir
@@ -659,7 +656,7 @@ export default function Home() {
               return JSON.parse(substring);
             }
             return null;
-          } catch (e) {
+          } catch {
             return null;
           }
         };
@@ -933,7 +930,7 @@ export default function Home() {
                 /* Panel Chat */
                 <div className="flex flex-col h-full bg-transparent">
                   <div className="flex-1 overflow-y-auto px-4 space-y-4 max-w-3xl mx-auto w-full scrollbar-hide">
-                    {messages.map((message, index) => (
+                    {messages.map((message) => (
                       <motion.div
                         key={message.id}
                         className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -1174,7 +1171,7 @@ export default function Home() {
             /* Mode plein écran chat uniquement */
             <div className="flex flex-col h-full items-center">
               <div className="flex-1 overflow-y-auto px-4 space-y-4 max-w-3xl w-full scrollbar-hide py-4">
-                {messages.map((message, index) => (
+                {messages.map((message) => (
                   <motion.div
                     key={message.id}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}

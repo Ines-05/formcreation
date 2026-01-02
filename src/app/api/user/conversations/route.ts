@@ -3,7 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import { Conversation } from '@/models/Conversation';
 import { auth } from '@clerk/nextjs/server';
 
-export async function GET(req: Request) {
+export async function GET() {
     try {
         const { userId } = await auth();
 
