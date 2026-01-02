@@ -1,6 +1,7 @@
 import { streamText } from 'ai';
 import { formModel } from '@/lib/ai';
 import { z } from 'zod';
+import { auth } from '@clerk/nextjs/server';
 
 const StreamRequestSchema = z.object({
   userMessage: z.string(),
@@ -17,6 +18,12 @@ const StreamRequestSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      // Pour le stream, on peut être plus strict ou autoriser l'anonyme
+      console.log('Anonymous streaming request');
+    }
+
     const body = await req.json();
     const { userMessage, conversationHistory, currentForm } = StreamRequestSchema.parse(body);
 
@@ -26,7 +33,7 @@ export async function POST(req: Request) {
       .map(msg => `${msg.role}: ${msg.content}`)
       .join('\n');
 
-    const currentFormContext = currentForm && currentForm.fields?.length 
+    const currentFormContext = currentForm && currentForm.fields?.length
       ? `\n\nFormulaire actuel:\nTitre: ${currentForm.title}\nChamps: ${currentForm.fields.map(f => `- ${f.label} (${f.type})`).join('\n')}`
       : '';
 
@@ -118,6 +125,12 @@ FORM_UPDATE:{"title":"...","description":"...","fields":[...]}
 - Demande clarification UNIQUEMENT si vraiment ambigu
 - Messages COURTS et UTILES
 - JAMAIS de select/radio/checkbox sans options (minimum 2)
+
+🚫 **STRICT SCOPE / HORS-SUJET :**
+- Ta SEULE ET UNIQUE TÂCHE est la création de formulaires.
+- Ne réponds JAMAIS à des questions de culture générale, politique, actualités, ou aide au code générique.
+- Si l'utilisateur sort du sujet, refuse poliment par exemple : "Désolé, je suis uniquement là pour vous aider avec vos formulaires"
+- En cas de refus, tu dois quand même terminer ta réponse par FORM_UPDATE: avec l'état actuel du formulaire (même vide).
 
 💡 SUGGESTIONS PROACTIVES (IMPORTANT):
 - Après avoir ajouté des champs, propose 2-3 questions pertinentes basées sur le CONTEXTE

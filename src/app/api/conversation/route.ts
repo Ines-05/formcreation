@@ -1,6 +1,7 @@
 import { generateText, generateObject, streamText } from 'ai';
 import { formModel } from '@/lib/ai';
 import { z } from 'zod';
+import { auth } from '@clerk/nextjs/server';
 
 const ConversationRequestSchema = z.object({
   message: z.string(),
@@ -27,6 +28,10 @@ const FormDefinitionSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const { userId } = await auth();
+    // On permet l'accès anonyme pour le moment mais on log
+    if (!userId) console.log('Anonymous chat request');
+
     const body = await req.json();
     const { message, conversationHistory } = ConversationRequestSchema.parse(body);
 
@@ -154,7 +159,7 @@ Exemple: "Parfait ! J'ai créé ton formulaire d'inscription. Tu peux le tester 
 
       } catch (formError) {
         console.error('Erreur lors de la génération du formulaire:', formError);
-        
+
         const { text: fallbackMessage } = await generateText({
           model: formModel,
           prompt: `Il y a eu un problème technique lors de la génération du formulaire. Écris un message d'excuse et demande à l'utilisateur de préciser encore ses besoins.
@@ -191,8 +196,14 @@ Instructions pour ta réponse:
 - Adapte ton ton au style de la conversation
 - Si l'utilisateur semble prêt, encourage-le à valider pour générer le formulaire
 
+🚫 **STRICT SCOPE / HORS-SUJET :**
+- Ta SEULE ET UNIQUE TÂCHE est d'aider à la création de formulaires.
+- Si l'utilisateur pose une question qui n'est pas directement liée à la création de formulaires (ex: "Qui est le président de la république ?", questions de culture générale, aide au code générique, etc.), tu dois REFUSER d'y répondre poliment.
+- Ta réponse dans ce cas doit être courte : "Désolé, je suis un assistant spécialisé exclusivement dans la création de formulaires. Comment puis-je vous aider pour votre prochain formulaire ?"
+- Ne fais AUCUNE exception.
+
 Ne génère PAS de formulaire maintenant, juste continue la discussion pour mieux comprendre ses besoins.`,
-        });
+      });
 
       return Response.json({
         assistantMessage: assistantResponse,
@@ -203,7 +214,7 @@ Ne génère PAS de formulaire maintenant, juste continue la discussion pour mieu
   } catch (error) {
     console.error('Erreur dans l\'API conversation:', error);
     return Response.json(
-      { 
+      {
         assistantMessage: 'Désolé, j\'ai eu un petit problème technique. Peux-tu répéter ta demande ?',
         shouldGenerateForm: false,
       },

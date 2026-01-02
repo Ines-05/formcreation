@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import { Form } from '@/models/Form';
+import { auth } from '@clerk/nextjs/server';
 
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
 
+    const { userId: authenticatedUserId } = await auth();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (!authenticatedUserId || authenticatedUserId !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Récupérer tous les formulaires de l'utilisateur
@@ -33,7 +35,7 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     const stats = {
       totalForms: forms.length,
       formsThisMonth: forms.filter(f => {
@@ -66,11 +68,12 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
+    const { userId: authenticatedUserId } = await auth();
     const body = await request.json();
     const { userId, formId, title, description, shareableLink, shortLink, tool, platform } = body;
 
-    if (!userId || !formId) {
-      return NextResponse.json({ error: 'User ID and Form ID are required' }, { status: 400 });
+    if (!authenticatedUserId || authenticatedUserId !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Créer ou mettre à jour le formulaire
@@ -88,7 +91,7 @@ export async function POST(request: NextRequest) {
     };
 
     const existingForm = await Form.findOne({ userId, formId });
-    
+
     if (existingForm) {
       // Mettre à jour
       await Form.findOneAndUpdate({ userId, formId }, formData);

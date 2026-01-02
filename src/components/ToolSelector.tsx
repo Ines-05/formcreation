@@ -47,15 +47,6 @@ export function ToolSelector({
       {/* Glow effect */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
 
-      <div className="mb-6 relative z-10">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-          {title}
-        </h3>
-        <p className="text-sm text-gray-500">
-          {description}
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
         {tools.map((tool, index) => (
           <motion.button

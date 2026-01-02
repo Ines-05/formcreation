@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Search, ExternalLink, Copy, EllipsisVertical, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
+import { useUser } from '@clerk/nextjs';
 
 interface FormStats {
   formId: string;
@@ -36,7 +37,9 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'google' | 'tally' | 'typeform'>('all');
-  const [userId] = useState('user-demo-123'); // TODO: Récupérer depuis l'auth
+
+  const { user, isLoaded } = useUser();
+  const userId = user?.id || 'anonymous';
 
   // Helper function pour afficher les logos des outils
   const getToolLogo = (tool: string, size: 'sm' | 'md' | 'lg' = 'md') => {
@@ -95,13 +98,24 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (isLoaded && userId !== 'anonymous') {
+      fetchDashboardData();
+    }
+  }, [isLoaded, userId]);
 
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/dashboard?userId=${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error('Invalid response from server');
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -172,15 +186,9 @@ export default function Dashboard() {
             onClick={() => router.push('/')}
             aria-label="Aller au chat FormBuilder"
           >
-            FormBuilder AI
+            Dashboard
           </button>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" className="rounded-full gap-2 text-muted-foreground hover:bg-white/50">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border border-white flex items-center justify-center text-xs">
-                👤
-              </div>
-              <span className="hidden sm:inline">Mon compte</span>
-            </Button>
+          <div className="flex items-center gap-4 pr-12 md:pr-14">
             <Button
               className="rounded-full gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-105"
               onClick={() => router.push('/')}
