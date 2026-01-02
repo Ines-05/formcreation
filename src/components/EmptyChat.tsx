@@ -29,7 +29,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
   };
 
   return (
-    <div className="relative h-full w-full flex items-center justify-center overflow-hidden bg-[#0a0e1a]">
+    <div className="relative h-full w-full flex items-center justify-center overflow-hidden bg-[#130d1a]">
       {/* Arrière-plan planète */}
       <PlanetBackground />
 
@@ -46,7 +46,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
             className="bg-primary/10 backdrop-blur-sm border border-primary/30 rounded-full px-4 py-2 flex items-center gap-2.5"
             whileHover={{
               scale: 1.05,
-              boxShadow: "0 0 30px rgba(29, 161, 242, 0.3)",
+              boxShadow: "0 0 30px rgba(139, 92, 246, 0.3)",
             }}
           >
             <motion.div
@@ -78,9 +78,9 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
               className="text-primary inline-block"
               animate={{
                 textShadow: [
-                  "0 0 20px rgba(29, 161, 242, 0.5)",
-                  "0 0 40px rgba(29, 161, 242, 0.8)",
-                  "0 0 20px rgba(29, 161, 242, 0.5)",
+                  "0 0 20px rgba(139, 92, 246, 0.5)",
+                  "0 0 40px rgba(139, 92, 246, 0.8)",
+                  "0 0 20px rgba(139, 92, 246, 0.5)",
                 ],
               }}
               transition={{
@@ -90,7 +90,7 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
               }}
               whileHover={{
                 scale: 1.1,
-                textShadow: "0 0 60px rgba(29, 161, 242, 1)",
+                textShadow: "0 0 60px rgba(139, 92, 246, 1)",
               }}
             >
               créer
@@ -122,9 +122,9 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
             whileHover={{ opacity: 1 }}
           />
 
-          <div className="relative bg-[#1a1f2e] rounded-[18px] border border-[#2a3441] shadow-2xl overflow-hidden group">
+          <div className="relative bg-[#1e1a2e] rounded-[18px] border border-[#2d2a3d] shadow-2xl overflow-hidden group">
             {/* Barre supérieure comme un IDE */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#2a3441]">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#2d2a3d]">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
                 <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
@@ -134,10 +134,10 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
                 <div className="size-4">
                   <svg className="block size-full" fill="none" viewBox="0 0 16 16">
                     <g clipPath="url(#clip0_input)">
-                      <path d={svgPaths.p21cdc640} stroke="#1DA1F2" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33247" />
-                      <path d="M13.3247 1.33247V3.9974" stroke="#1DA1F2" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33247" />
-                      <path d="M14.6571 2.66493H11.9922" stroke="#1DA1F2" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33247" />
-                      <path d={svgPaths.p2c80500} stroke="#1DA1F2" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33247" />
+                      <path d={svgPaths.p21cdc640} stroke="#8B5CF6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33247" />
+                      <path d="M13.3247 1.33247V3.9974" stroke="#8B5CF6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33247" />
+                      <path d="M14.6571 2.66493H11.9922" stroke="#8B5CF6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33247" />
+                      <path d={svgPaths.p2c80500} stroke="#8B5CF6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33247" />
                     </g>
                     <defs>
                       <clipPath id="clip0_input">
@@ -207,14 +207,14 @@ export function EmptyChat({ onSubmit }: EmptyChatProps) {
             {['Google Forms', 'Tally', 'Typeform'].map((tool, index) => (
               <motion.div
                 key={tool}
-                className="px-3 py-1.5 bg-[#1a1f2e] border border-[#2a3441] rounded-lg"
+                className="px-3 py-1.5 bg-[#1e1a2e] border border-[#2d2a3d] rounded-lg"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.7 + index * 0.1 }}
                 whileHover={{
                   scale: 1.05,
-                  borderColor: 'rgba(29, 161, 242, 0.5)',
-                  boxShadow: "0 0 20px rgba(29, 161, 242, 0.2)",
+                  borderColor: 'rgba(139, 92, 246, 0.5)',
+                  boxShadow: "0 0 20px rgba(139, 92, 246, 0.2)",
                 }}
               >
                 <span className="text-xs text-[#657786]">{tool}</span>

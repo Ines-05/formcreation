@@ -2,14 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Sparkles } from 'lucide-react';
+import { Send, Sparkles, User } from 'lucide-react';
 import { FormDefinition } from '@/lib/types';
 import { ToolSelector, FormTool } from '@/components/ToolSelector';
 import { GoogleFormsConnectionCard } from '@/components/GoogleFormsConnect';
 import { TypeformConnectionCard } from '@/components/TypeformConnect';
 import { TallyConnectionCard } from '@/components/ConnectTally';
 import { EmptyChat } from '@/components/EmptyChat';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ChatMessage {
   id: string;
@@ -55,11 +55,11 @@ export default function Home() {
       }
       const token = match[0];
       if (token.startsWith('**')) {
-        parts.push(<strong key={parts.length}>{token.slice(2, -2)}</strong>);
+        parts.push(<strong key={parts.length} className="font-semibold text-foreground/90">{token.slice(2, -2)}</strong>);
       } else if (token.startsWith('*')) {
-        parts.push(<em key={parts.length}>{token.slice(1, -1)}</em>);
+        parts.push(<em key={parts.length} className="text-foreground/80">{token.slice(1, -1)}</em>);
       } else if (token.startsWith('`')) {
-        parts.push(<code key={parts.length} className="px-1 py-0.5 rounded bg-gray-100">{token.slice(1, -1)}</code>);
+        parts.push(<code key={parts.length} className="px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono text-sm">{token.slice(1, -1)}</code>);
       }
       lastIndex = regex.lastIndex;
     }
@@ -77,7 +77,7 @@ export default function Home() {
     const flushList = () => {
       if (listItems.length > 0) {
         elements.push(
-          <ul key={`ul-${elements.length}`} className="list-disc pl-6 space-y-1">
+          <ul key={`ul-${elements.length}`} className="list-disc pl-6 space-y-1 my-2 text-foreground/90">
             {listItems.map((li, idx) => (
               <li key={idx}>{formatInline(li)}</li>
             ))}
@@ -100,7 +100,7 @@ export default function Home() {
       }
       flushList();
       elements.push(
-        <p key={`p-${elements.length}`} className="leading-relaxed">
+        <p key={`p-${elements.length}`} className="leading-relaxed text-foreground/90">
           {formatInline(line)}
         </p>
       );
@@ -205,6 +205,10 @@ export default function Home() {
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+    setIsMultiline(false);
     setIsLoading(true);
 
     try {
@@ -451,206 +455,219 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col">
+    <div className="h-screen bg-gradient-mesh-light flex flex-col font-sans text-foreground overflow-hidden">
 
-      {/* Header moderne */}
+      {/* Header - Transparent et épuré */}
       <motion.div
-        className="bg-white/80 backdrop-blur-sm shadow-sm border-b p-4 flex-shrink-0"
+        className="fixed top-0 inset-x-0 z-50 p-4"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 p-2 rounded-lg">
-              <Sparkles className="w-5 h-5 text-primary" />
+        <div className="max-w-4xl mx-auto">
+          <div className="backdrop-blur-xl bg-white/40 px-6 py-3 flex items-center justify-between rounded-full">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-2 rounded-full">
+                <Sparkles className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold text-gray-900">Form Builder AI</h1>
+                {selectedTool && (
+                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+                    {selectedTool === 'google-forms' ? 'Google Forms' : selectedTool === 'tally' ? 'Tally' : selectedTool}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Form Builder AI</h1>
-              {selectedTool && (
-                <p className="text-xs text-gray-500">
-                  Outil : {selectedTool === 'google-forms' ? 'Google Forms' : selectedTool === 'tally' ? 'Tally' : selectedTool}
-                </p>
-              )}
+
+            <div className="text-xs text-muted-foreground font-medium px-3 py-1 bg-gray-100/50 rounded-full">
+              Beta
             </div>
           </div>
         </div>
       </motion.div>
 
       {/* Contenu principal */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 pt-24 pb-4 overflow-hidden">
         {/* Interface avec chat et preview */}
-        <div className="h-full flex">
-          {/* Preview à gauche (si active) */}
-          {showPreview && previewLink && (
-            <motion.div
-              className="w-1/2 border-r bg-white flex flex-col"
-              initial={{ x: -100, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="p-4 border-b bg-gray-50">
-                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <span className="text-xl">👁️</span>
-                  Prévisualisation
-                </h2>
-                <p className="text-xs text-gray-600 mt-1">
-                  Voici à quoi ressemble ton formulaire
-                </p>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <iframe
-                  src={previewLink}
-                  className="w-full h-full border-0"
-                  title="Form Preview"
-                />
-              </div>
-              <div className="p-4 border-t bg-gray-50">
-                <Button
-                  onClick={handleFinalizeForm}
-                  className="w-full bg-green-600 hover:bg-green-700 text-lg py-6"
-                >
-                  ✅ Finaliser et obtenir le lien
-                </Button>
-              </div>
-            </motion.div>
-          )}
+        <div className="h-full flex max-w-[1600px] mx-auto px-4 gap-6">
 
-          {/* Chat à droite (ou pleine largeur si pas de preview) */}
-          <div className={`flex flex-col ${showPreview ? 'w-1/2' : 'w-full'}`}>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl mx-auto w-full">
+          {/* Preview à gauche (si active) */}
+          <AnimatePresence>
+            {showPreview && previewLink && (
+              <motion.div
+                className="w-1/2 hidden md:flex flex-col rounded-3xl overflow-hidden border border-border/50 shadow-2xl bg-white"
+                initial={{ x: -50, opacity: 0, scale: 0.95 }}
+                animate={{ x: 0, opacity: 1, scale: 1 }}
+                exit={{ x: -50, opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              >
+                <div className="p-4 border-b bg-gray-50/50 flex items-center justify-between">
+                  <h2 className="font-medium text-gray-900 flex items-center gap-2 text-sm">
+                    <span className="text-lg">👁️</span>
+                    Prévisualisation en direct
+                  </h2>
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
+                  </div>
+                </div>
+                <div className="flex-1 relative bg-white">
+                  <iframe
+                    src={previewLink}
+                    className="w-full h-full border-0 absolute inset-0"
+                    title="Form Preview"
+                  />
+                </div>
+                <div className="p-4 border-t bg-gray-50/50">
+                  <Button
+                    onClick={handleFinalizeForm}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all rounded-xl h-11"
+                  >
+                    ✅ Finaliser et obtenir le lien
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Chat à droite (ou centré si seul) */}
+          <div className={`flex flex-col transition-all duration-500 ease-in-out ${showPreview && previewLink ? 'w-1/2' : 'w-full max-w-3xl mx-auto'}`}>
+            <div className="flex-1 overflow-y-auto px-2 space-y-6 scrollbar-hide py-4">
               {messages.map((message, index) => (
                 <motion.div
                   key={message.id}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.1 }}
                 >
-                  <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
+                  <div className={`max-w-[85%] md:max-w-[75%] flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
 
-                    {/* Avatar + Message */}
-                    <div className={`flex items-start gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <motion.div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${message.role === 'user'
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-gray-200 text-gray-600'
-                          }`}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {message.role === 'user' ? '👤' : '🤖'}
-                      </motion.div>
-
-                      <div className="flex-1">
-                        <motion.div
-                          className={`rounded-lg p-4 ${message.role === 'user'
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-white border shadow-sm'
-                            }`}
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          <div className="whitespace-pre-wrap">{renderMarkdown(message.content)}</div>
-
-                          {/* Sélecteur d'outil */}
-                          {message.requiresToolSelection && (
-                            <div className="mt-4">
-                              <ToolSelector onSelectTool={handleToolSelection} />
-                            </div>
-                          )}
-
-                          {/* Formulaire de connexion */}
-                          {message.requiresToolConnection && (
-                            <div className="mt-4">
-                              {message.requiresToolConnection === 'tally' && (
-                                <TallyConnectionCard
-                                  userId={userId}
-                                  isConnected={isTallyConnected}
-                                  onConnect={() => {
-                                    setIsTallyConnected(true);
-                                    setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-                                    const successMsg: ChatMessage = {
-                                      id: Date.now().toString(),
-                                      role: 'assistant',
-                                      content: '🎉 Excellent ! Ton compte Tally est maintenant connecté. Décris-moi le formulaire que tu veux créer !',
-                                      timestamp: new Date(),
-                                    };
-                                    setMessages(prev => [...prev, successMsg]);
-                                  }}
-                                  onDisconnect={() => setIsTallyConnected(false)}
-                                />
-                              )}
-                              {message.requiresToolConnection === 'google-forms' && (
-                                <GoogleFormsConnectionCard
-                                  userId={userId}
-                                  isConnected={isGoogleConnected}
-                                  onConnect={() => {
-                                    setIsGoogleConnected(true);
-                                    setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-                                    const successMsg: ChatMessage = {
-                                      id: Date.now().toString(),
-                                      role: 'assistant',
-                                      content: '🎉 Super ! Ton compte Google est connecté. Maintenant, décris-moi le formulaire que tu souhaites créer !',
-                                      timestamp: new Date(),
-                                    };
-                                    setMessages(prev => [...prev, successMsg]);
-                                  }}
-                                  onDisconnect={() => setIsGoogleConnected(false)}
-                                />
-                              )}
-                              {message.requiresToolConnection === 'typeform' && (
-                                <TypeformConnectionCard
-                                  userId={userId}
-                                  isConnected={isTypeformConnected}
-                                  onConnect={() => {
-                                    setIsTypeformConnected(true);
-                                    setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-                                    const successMsg: ChatMessage = {
-                                      id: Date.now().toString(),
-                                      role: 'assistant',
-                                      content: '🎉 Génial ! Ton compte Typeform est connecté. Décris-moi maintenant le formulaire que tu souhaites créer !',
-                                      timestamp: new Date(),
-                                    };
-                                    setMessages(prev => [...prev, successMsg]);
-                                  }}
-                                  onDisconnect={() => setIsTypeformConnected(false)}
-                                />
-                              )}
-                            </div>
-                          )}
-
-                          {/* Lien final après finalisation */}
-                          {message.shareableLink && !showPreview && (
-                            <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                              <div className="flex gap-2 items-center">
-                                <input
-                                  type="text"
-                                  value={message.shareableLink}
-                                  readOnly
-                                  className="flex-1 px-3 py-2 bg-white border rounded text-sm font-mono"
-                                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(message.shareableLink!);
-                                    alert('Lien copié ! 📋');
-                                  }}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  📋 Copier
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </motion.div>
-
-                        {/* Timestamp */}
-                        <div className={`text-xs mt-1 ${message.role === 'user' ? 'text-right text-gray-500' : 'text-left text-gray-500'
-                          }`}>
-                          {isMounted && message.timestamp.toLocaleTimeString()}
+                    {/* Avatar */}
+                    <div className="flex-shrink-0 mt-1">
+                      {message.role === 'user' ? (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center text-white shadow-md shadow-primary/30">
+                          <User className="w-4 h-4" />
                         </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-primary shadow-sm">
+                          <span className="font-bold font-mono text-sm">F</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-2 min-w-0">
+                      <div className={`text-[11px] font-medium text-muted-foreground/60 px-1 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                        {message.role === 'user' ? 'Vous' : 'Form Assistant'}
                       </div>
+
+                      <motion.div
+                        className={`rounded-2xl p-5 shadow-sm
+                          ${message.role === 'user'
+                            ? 'bg-purple-600 text-white rounded-tr-sm'
+                            : 'bg-white/80 backdrop-blur-md border border-white/50 text-foreground rounded-tl-sm'
+                          }`}
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="whitespace-pre-wrap text-[15px]">{renderMarkdown(message.content)}</div>
+
+                        {/* Sélecteur d'outil */}
+                        {message.requiresToolSelection && (
+                          <div className="mt-6 pt-4 border-t border-border/50">
+                            <ToolSelector onSelectTool={handleToolSelection} />
+                          </div>
+                        )}
+
+                        {/* Formulaire de connexion */}
+                        {message.requiresToolConnection && (
+                          <div className="mt-6">
+                            {message.requiresToolConnection === 'tally' && (
+                              <TallyConnectionCard
+                                userId={userId}
+                                isConnected={isTallyConnected}
+                                onConnect={() => {
+                                  setIsTallyConnected(true);
+                                  setMessages(prev => prev.filter(m => !m.requiresToolConnection));
+                                  const successMsg: ChatMessage = {
+                                    id: Date.now().toString(),
+                                    role: 'assistant',
+                                    content: '🎉 Excellent ! Ton compte Tally est maintenant connecté. Décris-moi le formulaire que tu veux créer !',
+                                    timestamp: new Date(),
+                                  };
+                                  setMessages(prev => [...prev, successMsg]);
+                                }}
+                                onDisconnect={() => setIsTallyConnected(false)}
+                              />
+                            )}
+                            {message.requiresToolConnection === 'google-forms' && (
+                              <GoogleFormsConnectionCard
+                                userId={userId}
+                                isConnected={isGoogleConnected}
+                                onConnect={() => {
+                                  setIsGoogleConnected(true);
+                                  setMessages(prev => prev.filter(m => !m.requiresToolConnection));
+                                  const successMsg: ChatMessage = {
+                                    id: Date.now().toString(),
+                                    role: 'assistant',
+                                    content: '🎉 Super ! Ton compte Google est connecté. Maintenant, décris-moi le formulaire que tu souhaites créer !',
+                                    timestamp: new Date(),
+                                  };
+                                  setMessages(prev => [...prev, successMsg]);
+                                }}
+                                onDisconnect={() => setIsGoogleConnected(false)}
+                              />
+                            )}
+                            {message.requiresToolConnection === 'typeform' && (
+                              <TypeformConnectionCard
+                                userId={userId}
+                                isConnected={isTypeformConnected}
+                                onConnect={() => {
+                                  setIsTypeformConnected(true);
+                                  setMessages(prev => prev.filter(m => !m.requiresToolConnection));
+                                  const successMsg: ChatMessage = {
+                                    id: Date.now().toString(),
+                                    role: 'assistant',
+                                    content: '🎉 Génial ! Ton compte Typeform est connecté. Décris-moi maintenant le formulaire que tu souhaites créer !',
+                                    timestamp: new Date(),
+                                  };
+                                  setMessages(prev => [...prev, successMsg]);
+                                }}
+                                onDisconnect={() => setIsTypeformConnected(false)}
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {/* Lien final */}
+                        {message.shareableLink && !showPreview && (
+                          <div className="mt-2 p-1 bg-white/50 rounded-lg border border-white/60 w-fit max-w-full">
+                            <div className="flex gap-1.5 items-center p-0.5">
+                              <input
+                                type="text"
+                                value={message.shareableLink}
+                                readOnly
+                                className="flex-1 px-2 py-1 bg-transparent text-xs font-mono text-muted-foreground outline-none min-w-0"
+                                onClick={(e) => (e.target as HTMLInputElement).select()}
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(message.shareableLink!);
+                                  alert('Lien copié ! 📋');
+                                }}
+                                className="h-7 w-7 rounded-md hover:bg-white text-green-600 hover:text-green-700 shrink-0"
+                                title="Copier le lien"
+                              >
+                                <span className="text-xs">📋</span>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
                     </div>
                   </div>
                 </motion.div>
@@ -658,56 +675,74 @@ export default function Home() {
 
               {isLoading && (
                 <motion.div
-                  className="flex justify-start"
+                  className="flex justify-start pl-12"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                 >
-                  <div className="flex items-center gap-2 bg-white border shadow-sm rounded-lg p-4">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="flex items-center gap-1.5 bg-white/50 border border-white/40 shadow-sm rounded-2xl px-5 py-4">
+                    <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
                 </motion.div>
               )}
 
-              <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} className="h-4" />
             </div>
 
-            {/* Input zone */}
-            <motion.div
-              className="border-t bg-white p-4"
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <form onSubmit={handleSubmit} className="max-w-3xl mx-auto w-full flex items-center gap-2">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => { setInput(e.target.value); autoResizeInput(); }}
-                  onInput={autoResizeInput}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      if (input.trim() && !isLoading) {
-                        (e.currentTarget as HTMLTextAreaElement).form?.requestSubmit();
-                      }
-                    }
-                  }}
-                  placeholder="Décrivez votre formulaire..."
-                  rows={1}
-                  className={`flex-1 resize-none overflow-hidden h-12 md:h-14 px-5 md:px-6 py-3 md:py-4 border ${isMultiline ? 'rounded-lg' : 'rounded-full'} bg-gray-50 placeholder-gray-400 text-[15px] md:text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
-                  disabled={isLoading}
-                />
-                <Button
-                  type="submit"
-                  disabled={!input.trim() || isLoading}
-                  className="h-12 md:h-14 px-5 md:px-6 rounded-full bg-purple-600 hover:bg-purple-700"
+            {/* Input zone - Flottante */}
+            <div className="p-4 md:p-6 pt-2">
+              <motion.div
+                className="relative max-w-3xl mx-auto"
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-[28px] blur-lg -z-10" />
+
+                <form
+                  onSubmit={handleSubmit}
+                  className={`
+                    relative flex items-end gap-2 p-2 bg-white/80 backdrop-blur-xl
+                    ${isMultiline ? 'rounded-[28px]' : 'rounded-full'}
+                    transition-all duration-300
+                  `}
                 >
-                  <Send className="w-5 h-5" />
-                </Button>
-              </form>
-            </motion.div>
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => { setInput(e.target.value); autoResizeInput(); }}
+                    onInput={autoResizeInput}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (input.trim() && !isLoading) {
+                          (e.currentTarget as HTMLTextAreaElement).form?.requestSubmit();
+                        }
+                      }
+                    }}
+                    placeholder="Décrivez votre formulaire..."
+                    rows={1}
+                    className="flex-1 resize-none bg-transparent max-h-[200px] py-3.5 px-5 text-[15px] focus:outline-none placeholder:text-muted-foreground/50"
+                    disabled={isLoading}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!input.trim() || isLoading}
+                    size="icon"
+                    className="w-11 h-11 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/25 shrink-0 mb-0.5 mr-0.5"
+                  >
+                    <Send className="w-5 h-5 ml-0.5" />
+                  </Button>
+                </form>
+
+                <div className="text-center mt-3">
+                  <p className="text-[10px] text-muted-foreground/40 font-medium">
+                    Appuyez sur Entrée pour envoyer
+                  </p>
+                </div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </div>

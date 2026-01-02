@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type React from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Send, Sparkles, LayoutDashboard, User } from 'lucide-react';
 import { FormDefinition } from '@/lib/types';
 import { ToolSelector, FormTool } from '@/components/ToolSelector';
 import { GoogleFormsConnectionCard } from '@/components/GoogleFormsConnect';
@@ -14,7 +14,7 @@ import { FormPreviewModern } from '@/components/FormPreviewModern';
 import { FormPreviewCard } from '@/components/FormPreviewCard';
 import { FormLinkCard } from '@/components/FormLinkCard';
 import { ResizablePanels } from '@/components/ResizablePanels';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ChatMessage {
   id: string;
@@ -50,6 +50,22 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [isMultiline, setIsMultiline] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Afficher si la souris est en tout haut (30px) ou si on survole déjà la navbar
+      const isOverNav = (document.querySelector('.nav-header:hover') !== null);
+      if (e.clientY < 30 || isOverNav) {
+        setShowNavbar(true);
+      } else if (e.clientY > 100) {
+        setShowNavbar(false);
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const formatInline = (inputText: string) => {
     const parts: React.ReactNode[] = [];
@@ -62,11 +78,11 @@ export default function Home() {
       }
       const token = match[0];
       if (token.startsWith('**')) {
-        parts.push(<strong key={parts.length}>{token.slice(2, -2)}</strong>);
+        parts.push(<strong key={parts.length} className="font-semibold">{token.slice(2, -2)}</strong>);
       } else if (token.startsWith('*')) {
-        parts.push(<em key={parts.length}>{token.slice(1, -1)}</em>);
+        parts.push(<em key={parts.length} className="italic">{token.slice(1, -1)}</em>);
       } else if (token.startsWith('`')) {
-        parts.push(<code key={parts.length} className="px-1 py-0.5 rounded bg-gray-100">{token.slice(1, -1)}</code>);
+        parts.push(<code key={parts.length} className="px-1.5 py-0.5 rounded-md bg-white/20 font-mono text-sm">{token.slice(1, -1)}</code>);
       }
       lastIndex = regex.lastIndex;
     }
@@ -84,7 +100,7 @@ export default function Home() {
     const flushList = () => {
       if (listItems.length > 0) {
         elements.push(
-          <ul key={`ul-${elements.length}`} className="list-disc pl-6 space-y-1">
+          <ul key={`ul-${elements.length}`} className="list-disc pl-6 space-y-1 my-2">
             {listItems.map((li, idx) => (
               <li key={idx}>{formatInline(li)}</li>
             ))}
@@ -166,7 +182,7 @@ export default function Home() {
     checkTallyConnection();
     checkGoogleConnection();
     checkTypeformConnection();
-  }, [checkGoogleConnection, checkTallyConnection, checkTypeformConnection]);
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -306,6 +322,13 @@ export default function Home() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+
+    // Reset input height
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+    setIsMultiline(false);
+
 
     try {
       // Si l'utilisateur a choisi un outil mais n'est pas connecté
@@ -490,22 +513,40 @@ export default function Home() {
         let formJson = '';
         let messageText = '';
 
+        // Fonction pour tenter de parser le JSON partiel
+        const tryParsePartialJson = (jsonString: string) => {
+          try {
+            // Tenter de trouver le dernier objet complet
+            let lastValidJson = jsonString.trim();
+            if (!lastValidJson.startsWith('{')) return null;
+
+            // Si le JSON ne finit pas par }, on tente de fermer les accolades pour voir
+            // Mais plus simplement, on peut essayer de parser à chaque chunk
+            // car le modèle émet souvent des FORM_UPDATE complets ou structurés
+
+            // Recherche du dernier } pour extraire ce qui est potentiellement parseable
+            const lastBrace = lastValidJson.lastIndexOf('}');
+            if (lastBrace !== -1) {
+              const substring = lastValidJson.substring(0, lastBrace + 1);
+              return JSON.parse(substring);
+            }
+            return null;
+          } catch (e) {
+            return null;
+          }
+        };
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            // À la fin du streaming, parser le JSON si présent
+            // À la fin du streaming, assurer le parsing final
             if (formJson) {
               try {
-                // Nettoyer le JSON : enlever les espaces/sauts de ligne avant/après
                 let cleanedJson = formJson.trim();
-
-                // Si le JSON est suivi de texte, extraire uniquement l'objet JSON
-                // Trouver le premier { et le dernier } correspondant
                 const firstBrace = cleanedJson.indexOf('{');
                 if (firstBrace !== -1) {
                   let braceCount = 0;
                   let lastBrace = firstBrace;
-
                   for (let i = firstBrace; i < cleanedJson.length; i++) {
                     if (cleanedJson[i] === '{') braceCount++;
                     if (cleanedJson[i] === '}') {
@@ -516,22 +557,16 @@ export default function Home() {
                       }
                     }
                   }
-
                   cleanedJson = cleanedJson.substring(firstBrace, lastBrace + 1);
                 }
-
                 const formDef = JSON.parse(cleanedJson);
                 setCurrentFormDefinition(formDef);
                 setShowPreview(true);
-
-                // Mettre à jour le message avec le formDefinition
                 setMessages(prev => prev.map(msg =>
-                  msg.id === assistantMessageId
-                    ? { ...msg, formDefinition: formDef }
-                    : msg
+                  msg.id === assistantMessageId ? { ...msg, formDefinition: formDef } : msg
                 ));
               } catch (e) {
-                console.error('Erreur parsing form:', e, 'JSON reçu:', formJson);
+                console.error('Erreur parsing final:', e);
               }
             }
             break;
@@ -540,24 +575,23 @@ export default function Home() {
           const chunk = decoder.decode(value, { stream: true });
           accumulatedText += chunk;
 
-          // Séparer le texte du message et le JSON du formulaire
           const formMatch = accumulatedText.match(/FORM_UPDATE:([\s\S]*)/);
-
           if (formMatch) {
-            // Extraire le texte avant FORM_UPDATE
             messageText = accumulatedText.split('FORM_UPDATE:')[0].trim();
-            // Accumuler le JSON (peut être incomplet pendant le streaming)
             formJson = formMatch[1];
+
+            // Tentative de preview en temps réel
+            const partialForm = tryParsePartialJson(formJson);
+            if (partialForm && partialForm.fields && partialForm.fields.length > 0) {
+              setCurrentFormDefinition(partialForm);
+              setShowPreview(true);
+            }
           } else {
-            // Pas encore de FORM_UPDATE, tout est du texte
             messageText = accumulatedText;
           }
 
-          // Mettre à jour le message de l'assistant (sans le JSON)
           setMessages(prev => prev.map(msg =>
-            msg.id === assistantMessageId
-              ? { ...msg, content: messageText }
-              : msg
+            msg.id === assistantMessageId ? { ...msg, content: messageText } : msg
           ));
         }
       }
@@ -566,8 +600,6 @@ export default function Home() {
       console.error('Erreur streaming:', error);
     }
   };
-
-
 
 
   const isToolConnected = (tool: FormTool): boolean => {
@@ -592,31 +624,33 @@ export default function Home() {
 
     setMessages(prev => prev.filter(m => !m.requiresToolSelection));
 
-    const confirmationMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: `Excellent choix ! Tu as sélectionné ${toolName}. Connecte-toi pour commencer.`,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, confirmationMsg]);
-
     if (isToolConnected(tool)) {
-      const readyMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+      const confirmationMsg: ChatMessage = {
+        id: Date.now().toString(),
         role: 'assistant',
-        content: `Ton compte est déjà connecté ! Décris-moi le formulaire que tu veux créer. 🎨`,
+        content: `✅ Excellent choix ! Tu as sélectionné **${toolName}**. J'ai détecté que ton compte est déjà connecté. Décris-moi le formulaire que tu veux créer ! 🎨`,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, readyMsg]);
-    } else if (tool !== 'internal') {
-      const connectMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+      setMessages(prev => [...prev, confirmationMsg]);
+    } else {
+      const confirmationMsg: ChatMessage = {
+        id: Date.now().toString(),
         role: 'assistant',
-        content: ``,
+        content: `Excellent choix ! Tu as sélectionné **${toolName}**. Connecte-toi pour commencer.`,
         timestamp: new Date(),
-        requiresToolConnection: tool,
       };
-      setMessages(prev => [...prev, connectMsg]);
+      setMessages(prev => [...prev, confirmationMsg]);
+
+      if (tool !== 'internal') {
+        const connectMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: ``,
+          timestamp: new Date(),
+          requiresToolConnection: tool,
+        };
+        setMessages(prev => [...prev, connectMsg]);
+      }
     }
   };
 
@@ -630,7 +664,6 @@ export default function Home() {
 
       // Créer le formulaire selon l'outil sélectionné
       if (selectedTool === 'typeform') {
-        // Créer sur Typeform
         const response = await fetch('/api/typeform/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -648,7 +681,6 @@ export default function Home() {
         }
 
       } else if (selectedTool === 'google-forms') {
-        // Créer sur Google Forms
         const response = await fetch('/api/google-forms/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -666,7 +698,6 @@ export default function Home() {
         }
 
       } else if (selectedTool === 'tally') {
-        // Créer sur Tally
         const response = await fetch('/api/tally/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -684,7 +715,6 @@ export default function Home() {
         }
 
       } else {
-        // Créer localement (fallback)
         const response = await fetch('/api/forms/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -703,10 +733,8 @@ export default function Home() {
         }
       }
 
-      // Mettre à jour le lien de preview
       setPreviewLink(finalLink);
 
-      // Message de succès
       const toolName = selectedTool === 'google-forms' ? 'Google Forms' :
         selectedTool === 'typeform' ? 'Typeform' :
           selectedTool === 'tally' ? 'Tally' : 'local';
@@ -741,44 +769,59 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen bg-gradient-mesh-light flex flex-col">
+    <div className="h-screen bg-gradient-mesh-light flex flex-col overflow-hidden text-foreground">
 
-      {/* Header moderne */}
-      <motion.div
-        className="bg-white/80 backdrop-blur-sm shadow-sm border-b p-4 flex-shrink-0"
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 p-2 rounded-lg">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Form Builder AI</h1>
-              {selectedTool && (
-                <p className="text-xs text-gray-500">
-                  Outil : {selectedTool === 'google-forms' ? 'Google Forms' : selectedTool === 'tally' ? 'Tally' : selectedTool}
-                </p>
-              )}
-            </div>
-          </div>
+      {/* Zone de détection invisible en haut pour aider au survol */}
+      <div
+        className="fixed top-0 inset-x-0 h-4 z-[60]"
+        onMouseEnter={() => setShowNavbar(true)}
+      />
 
-          {/* Bouton Tableau de bord */}
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={() => window.location.href = '/dashboard'}
+      {/* Header moderne & flottant qui apparaît au survol */}
+      <AnimatePresence>
+        {showNavbar && (
+          <motion.div
+            className="fixed top-0 inset-x-0 z-50 p-4 nav-header"
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            onMouseEnter={() => setShowNavbar(true)}
+            onMouseLeave={() => setShowNavbar(false)}
           >
-            <LayoutDashboard className="w-4 h-4" />
-            <span className="hidden sm:inline">Tableau de bord</span>
-          </Button>
-        </div>
-      </motion.div>
+            <div className="max-w-7xl mx-auto">
+              <div className="backdrop-blur-xl bg-white/40 px-6 py-3 flex items-center justify-between rounded-full border border-white/20 shadow-xl">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h1 className="text-sm font-semibold text-gray-900">Form Builder AI</h1>
+                    {selectedTool && (
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                        {selectedTool === 'google-forms' ? 'Google Forms' : selectedTool === 'tally' ? 'Tally' : selectedTool}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 rounded-full border-none bg-white/50 hover:bg-white/80"
+                  onClick={() => window.location.href = '/dashboard'}
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span className="hidden sm:inline">Tableau de bord</span>
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Contenu principal */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden pt-4 pb-4">
         {showPreview ? (
           /* Mode split avec panels redimensionnables */
           <ResizablePanels
@@ -787,15 +830,15 @@ export default function Home() {
             maxSize={70}
             left={
               /* Panel Chat */
-              <div className="flex flex-col h-full">
-                <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4 max-w-3xl mx-auto w-full">
+              <div className="flex flex-col h-full bg-transparent">
+                <div className="flex-1 overflow-y-auto px-4 space-y-4 max-w-3xl mx-auto w-full scrollbar-hide">
                   {messages.map((message, index) => (
                     <motion.div
                       key={message.id}
                       className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
+                      transition={{ delay: 0.1 }}
                     >
                       <div className={`${message.role === 'user'
                         ? 'max-w-[85%] order-2'
@@ -805,22 +848,20 @@ export default function Home() {
                         {/* Avatar + Message */}
                         <div className={`flex items-start gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                           <motion.div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${message.role === 'user'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-blue-500 text-white'
+                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${message.role === 'user'
+                              ? 'bg-gradient-to-br from-primary to-purple-600 text-white'
+                              : 'bg-white text-primary border border-gray-100'
                               }`}
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
                           >
-                            {message.role === 'user' ? '👤' : '🤖'}
+                            {message.role === 'user' ? <User className="w-4 h-4" /> : <span className="font-bold font-mono text-sm">F</span>}
                           </motion.div>
 
                           <div className="flex-1 min-w-0 space-y-3">
                             {/* Texte du message */}
                             {message.content && (
                               <div className={`${message.role === 'user'
-                                ? 'bg-blue-500 text-white rounded-lg p-4'
-                                : 'text-gray-900'
+                                ? 'bg-purple-600 text-white rounded-2xl rounded-tr-sm p-4 shadow-md'
+                                : 'bg-white/80 backdrop-blur-md border border-white/50 text-gray-900 rounded-2xl rounded-tl-sm p-5 shadow-sm'
                                 }`}>
                                 <div className="whitespace-pre-wrap break-words">{renderMarkdown(message.content)}</div>
                               </div>
@@ -836,12 +877,14 @@ export default function Home() {
 
                             {/* Sélecteur d'outil */}
                             {message.requiresToolSelection && (
-                              <ToolSelector onSelectTool={handleToolSelection} />
+                              <div className="mt-2">
+                                <ToolSelector onSelectTool={handleToolSelection} />
+                              </div>
                             )}
 
                             {/* Formulaire de connexion */}
                             {message.requiresToolConnection && (
-                              <>
+                              <div className="mt-2">
                                 {message.requiresToolConnection === 'tally' && (
                                   <TallyConnectionCard
                                     userId={userId}
@@ -849,12 +892,10 @@ export default function Home() {
                                     onConnect={() => {
                                       setIsTallyConnected(true);
                                       setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-
-                                      // Simple statut de connexion
                                       const connectedMsg: ChatMessage = {
                                         id: Date.now().toString(),
                                         role: 'assistant',
-                                        content: '✅ Parfait ! Tu es maintenant connecté à Tally. Décris-moi le formulaire que tu souhaites créer.',
+                                        content: '✅ Parfait ! Tu es maintenant connecté à Tally.',
                                         timestamp: new Date(),
                                       };
                                       setMessages(prev => [...prev, connectedMsg]);
@@ -871,11 +912,10 @@ export default function Home() {
                                     onConnect={() => {
                                       setIsGoogleConnected(true);
                                       setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-
                                       const connectedMsg: ChatMessage = {
                                         id: Date.now().toString(),
                                         role: 'assistant',
-                                        content: '✅ Parfait ! Tu es maintenant connecté à Google Forms. Décris-moi le formulaire que tu souhaites créer.',
+                                        content: '✅ Parfait ! Tu es maintenant connecté à Google Forms.',
                                         timestamp: new Date(),
                                       };
                                       setMessages(prev => [...prev, connectedMsg]);
@@ -892,11 +932,10 @@ export default function Home() {
                                     onConnect={() => {
                                       setIsTypeformConnected(true);
                                       setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-
                                       const connectedMsg: ChatMessage = {
                                         id: Date.now().toString(),
                                         role: 'assistant',
-                                        content: '✅ Parfait ! Tu es maintenant connecté à Typeform. Décris-moi le formulaire que tu souhaites créer.',
+                                        content: '✅ Parfait ! Tu es maintenant connecté à Typeform.',
                                         timestamp: new Date(),
                                       };
                                       setMessages(prev => [...prev, connectedMsg]);
@@ -905,15 +944,17 @@ export default function Home() {
                                     onDisconnect={() => setIsTypeformConnected(false)}
                                   />
                                 )}
-                              </>
+                              </div>
                             )}
 
                             {/* Lien final après finalisation */}
                             {message.shareableLink && (
-                              <FormLinkCard
-                                link={message.shareableLink}
-                                tool={selectedTool && selectedTool !== 'internal' ? selectedTool : 'tally'}
-                              />
+                              <div className="mt-2">
+                                <FormLinkCard
+                                  link={message.shareableLink}
+                                  tool={selectedTool && selectedTool !== 'internal' ? selectedTool : 'tally'}
+                                />
+                              </div>
                             )}
                           </div>
                         </div>
@@ -923,29 +964,36 @@ export default function Home() {
 
                   {isLoading && (
                     <motion.div
-                      className="flex justify-start"
+                      className="flex justify-start pl-12"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     >
-                      <div className="flex items-center gap-2 bg-white border shadow-sm rounded-lg p-4">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      <div className="flex items-center gap-1.5 bg-white/50 border border-white/40 shadow-sm rounded-2xl px-5 py-4">
+                        <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                       </div>
                     </motion.div>
                   )}
 
-                  <div ref={messagesEndRef} />
+                  <div ref={messagesEndRef} className="h-4" />
                 </div>
 
                 {/* Input zone */}
                 <motion.div
-                  className="border-t bg-white p-4"
+                  className="p-4"
                   initial={{ y: 50, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <form onSubmit={handleSubmit} className="max-w-3xl mx-auto w-full flex items-center gap-2">
+                  <form
+                    onSubmit={handleSubmit}
+                    className={`
+                        relative flex items-end gap-2 p-2 bg-white/80 backdrop-blur-xl max-w-3xl mx-auto
+                        ${isMultiline ? 'rounded-[28px]' : 'rounded-full'}
+                        transition-all duration-300
+                      `}
+                  >
                     <textarea
                       ref={inputRef}
                       value={input}
@@ -961,15 +1009,16 @@ export default function Home() {
                       }}
                       placeholder="Décrivez votre formulaire..."
                       rows={1}
-                      className={`flex-1 resize-none overflow-hidden h-12 md:h-14 px-5 md:px-6 py-3 md:py-4 border ${isMultiline ? 'rounded-lg' : 'rounded-full'} bg-gray-50 placeholder-gray-400 text-[15px] md:text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                      className="flex-1 resize-none bg-transparent max-h-[200px] py-3.5 px-5 text-[15px] focus:outline-none placeholder:text-muted-foreground/50"
                       disabled={isLoading}
                     />
                     <Button
                       type="submit"
                       disabled={!input.trim() || isLoading}
-                      className="h-12 md:h-14 px-5 md:px-6 rounded-full bg-purple-600 hover:bg-purple-700"
+                      size="icon"
+                      className="w-11 h-11 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/25 shrink-0 mb-0.5 mr-0.5"
                     >
-                      <Send className="w-5 h-5" />
+                      <Send className="w-5 h-5 ml-0.5" />
                     </Button>
                   </form>
                 </motion.div>
@@ -978,7 +1027,7 @@ export default function Home() {
             right={
               /* Panel Preview */
               <motion.div
-                className="h-full"
+                className="h-full bg-white/50 backdrop-blur-sm border-l border-white/40"
                 initial={{ x: 100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: 100, opacity: 0 }}
@@ -1015,40 +1064,38 @@ export default function Home() {
           />
         ) : (
           /* Mode plein écran chat uniquement */
-          <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 space-y-4 max-w-4xl mx-auto w-full">
+          <div className="flex flex-col h-full items-center">
+            <div className="flex-1 overflow-y-auto px-4 space-y-4 max-w-3xl w-full scrollbar-hide py-4">
               {messages.map((message, index) => (
                 <motion.div
                   key={message.id}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: 0.1 }}
                 >
                   <div className={`${message.role === 'user'
-                    ? 'max-w-[80%] order-2'
+                    ? 'max-w-[85%] order-2'
                     : 'w-full max-w-3xl mx-auto order-1'
                     }`}>
 
                     {/* Avatar + Message */}
                     <div className={`flex items-start gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                       <motion.div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${message.role === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-blue-500 text-white'
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${message.role === 'user'
+                          ? 'bg-gradient-to-br from-primary to-purple-600 text-white'
+                          : 'bg-white text-primary border border-gray-100'
                           }`}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
                       >
-                        {message.role === 'user' ? '👤' : '🤖'}
+                        {message.role === 'user' ? <User className="w-4 h-4" /> : <span className="font-bold font-mono text-sm">F</span>}
                       </motion.div>
 
                       <div className="flex-1 min-w-0 space-y-3">
                         {/* Texte du message */}
                         {message.content && (
                           <div className={`${message.role === 'user'
-                            ? 'bg-blue-500 text-white rounded-lg p-4'
-                            : 'text-gray-900'
+                            ? 'bg-purple-600 text-white rounded-2xl rounded-tr-sm p-4 shadow-md'
+                            : 'bg-white/80 backdrop-blur-md border border-white/50 text-gray-900 rounded-2xl rounded-tl-sm p-5 shadow-sm'
                             }`}>
                             <div className="whitespace-pre-wrap break-words">{renderMarkdown(message.content)}</div>
                           </div>
@@ -1064,12 +1111,15 @@ export default function Home() {
 
                         {/* Sélecteur d'outil */}
                         {message.requiresToolSelection && (
-                          <ToolSelector onSelectTool={handleToolSelection} />
+                          <div className="mt-2">
+                            <ToolSelector onSelectTool={handleToolSelection} />
+                          </div>
                         )}
+
 
                         {/* Formulaire de connexion */}
                         {message.requiresToolConnection && (
-                          <>
+                          <div className="mt-2">
                             {message.requiresToolConnection === 'tally' && (
                               <TallyConnectionCard
                                 userId={userId}
@@ -1077,22 +1127,19 @@ export default function Home() {
                                 onConnect={() => {
                                   setIsTallyConnected(true);
                                   setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-
-                                  // Simple statut de connexion
-                                  const statusMsg: ChatMessage = {
+                                  const connectedMsg: ChatMessage = {
                                     id: Date.now().toString(),
                                     role: 'assistant',
-                                    content: 'Connecté à Tally',
+                                    content: '✅ Parfait ! Tu es maintenant connecté à Tally.',
                                     timestamp: new Date(),
                                   };
-                                  setMessages(prev => [...prev, statusMsg]);
+                                  setMessages(prev => [...prev, connectedMsg]);
 
-                                  // Message pour créer le formulaire
                                   setTimeout(() => {
                                     const nextMsg: ChatMessage = {
                                       id: (Date.now() + 1).toString(),
                                       role: 'assistant',
-                                      content: 'Parfait ! Maintenant, décrivez-moi le formulaire que vous souhaitez créer. Par exemple : "un formulaire de contact" ou "un sondage de satisfaction client".',
+                                      content: 'Parfait ! Maintenant, décrivez-moi le formulaire que vous souhaitez créer.',
                                       timestamp: new Date(),
                                     };
                                     setMessages(prev => [...prev, nextMsg]);
@@ -1109,22 +1156,19 @@ export default function Home() {
                                 onConnect={() => {
                                   setIsGoogleConnected(true);
                                   setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-
-                                  // Simple statut de connexion
-                                  const statusMsg: ChatMessage = {
+                                  const connectedMsg: ChatMessage = {
                                     id: Date.now().toString(),
                                     role: 'assistant',
-                                    content: 'Connecté à Google Forms',
+                                    content: '✅ Parfait ! Tu es maintenant connecté à Google Forms.',
                                     timestamp: new Date(),
                                   };
-                                  setMessages(prev => [...prev, statusMsg]);
+                                  setMessages(prev => [...prev, connectedMsg]);
 
-                                  // Message pour créer le formulaire
                                   setTimeout(() => {
                                     const nextMsg: ChatMessage = {
                                       id: (Date.now() + 1).toString(),
                                       role: 'assistant',
-                                      content: 'Parfait ! Maintenant, décrivez-moi le formulaire que vous souhaitez créer. Par exemple : "un formulaire de contact" ou "un sondage de satisfaction client".',
+                                      content: 'Parfait ! Maintenant, décrivez-moi le formulaire que vous souhaitez créer.',
                                       timestamp: new Date(),
                                     };
                                     setMessages(prev => [...prev, nextMsg]);
@@ -1141,22 +1185,19 @@ export default function Home() {
                                 onConnect={() => {
                                   setIsTypeformConnected(true);
                                   setMessages(prev => prev.filter(m => !m.requiresToolConnection));
-
-                                  // Simple statut de connexion
-                                  const statusMsg: ChatMessage = {
+                                  const connectedMsg: ChatMessage = {
                                     id: Date.now().toString(),
                                     role: 'assistant',
-                                    content: 'Connecté à Typeform',
+                                    content: '✅ Parfait ! Tu es maintenant connecté à Typeform.',
                                     timestamp: new Date(),
                                   };
-                                  setMessages(prev => [...prev, statusMsg]);
+                                  setMessages(prev => [...prev, connectedMsg]);
 
-                                  // Message pour créer le formulaire
                                   setTimeout(() => {
                                     const nextMsg: ChatMessage = {
                                       id: (Date.now() + 1).toString(),
                                       role: 'assistant',
-                                      content: 'Parfait ! Maintenant, décrivez-moi le formulaire que vous souhaitez créer. Par exemple : "un formulaire de contact" ou "un sondage de satisfaction client".',
+                                      content: 'Parfait ! Maintenant, décrivez-moi le formulaire que vous souhaitez créer.',
                                       timestamp: new Date(),
                                     };
                                     setMessages(prev => [...prev, nextMsg]);
@@ -1166,15 +1207,17 @@ export default function Home() {
                                 onDisconnect={() => setIsTypeformConnected(false)}
                               />
                             )}
-                          </>
+                          </div>
                         )}
 
                         {/* Lien final après finalisation */}
                         {message.shareableLink && (
-                          <FormLinkCard
-                            link={message.shareableLink}
-                            tool={selectedTool && selectedTool !== 'internal' ? selectedTool : 'tally'}
-                          />
+                          <div className="mt-2">
+                            <FormLinkCard
+                              link={message.shareableLink}
+                              tool={selectedTool && selectedTool !== 'internal' ? selectedTool : 'tally'}
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1184,29 +1227,36 @@ export default function Home() {
 
               {isLoading && (
                 <motion.div
-                  className="flex justify-start"
+                  className="flex justify-start pl-12"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                 >
-                  <div className="flex items-center gap-2 bg-white border shadow-sm rounded-lg p-4">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="flex items-center gap-1.5 bg-white/50 border border-white/40 shadow-sm rounded-2xl px-5 py-4">
+                    <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
                 </motion.div>
               )}
 
-              <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} className="h-4" />
             </div>
 
             {/* Input zone */}
             <motion.div
-              className="border-t bg-white p-4"
+              className="p-4 w-full"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <form onSubmit={handleSubmit} className="max-w-3xl mx-auto w-full flex items-center gap-2">
+              <form
+                onSubmit={handleSubmit}
+                className={`
+                    relative flex items-end gap-2 p-2 bg-white/80 backdrop-blur-xl max-w-3xl mx-auto
+                    ${isMultiline ? 'rounded-[28px]' : 'rounded-full'}
+                    transition-all duration-300
+                  `}
+              >
                 <textarea
                   ref={inputRef}
                   value={input}
@@ -1222,15 +1272,16 @@ export default function Home() {
                   }}
                   placeholder="Décrivez votre formulaire..."
                   rows={1}
-                  className={`flex-1 resize-none overflow-hidden h-12 md:h-14 px-5 md:px-6 py-3 md:py-4 border ${isMultiline ? 'rounded-lg' : 'rounded-full'} bg-gray-50 placeholder-gray-400 text-[15px] md:text-base focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                  className="flex-1 resize-none bg-transparent max-h-[200px] py-3.5 px-5 text-[15px] focus:outline-none placeholder:text-muted-foreground/50"
                   disabled={isLoading}
                 />
                 <Button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="h-12 md:h-14 px-5 md:px-6 rounded-full bg-purple-600 hover:bg-purple-700"
+                  size="icon"
+                  className="w-11 h-11 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/25 shrink-0 mb-0.5 mr-0.5"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-5 h-5 ml-0.5" />
                 </Button>
               </form>
             </motion.div>
